@@ -22,7 +22,12 @@
 # THE SOFTWARE.
 #
 
+import logging
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
 from pymeasure.instruments import Instrument
+from pymeasure.instruments.validators import truncated_range, strict_discrete_set, joined_validators
 
 class AgilentB2961A(Instrument):
     """
@@ -44,9 +49,9 @@ class AgilentB2961A(Instrument):
     """
 
     source_mode = Instrument.control(
-        ":SOUR:FUNC?",
-        ":SOUR:FUNC %s",
-        """ A string property that controls the source mode, which can take the values 'current' or 'voltage'. The convenience methods :meth:`~.AglientB2900A.apply_current` and :meth:`~.AgilentB2900A.apply_voltage` can also be used. """,
+        ":SOUR:FUNC:MODE?",
+        ":SOUR:FUNC:MODE %s",
+        """ A string property that controls the source mode, which can take the values 'current' or 'voltage'. The convenience methods :meth:`~.AglientB2900A.apply_current` and :meth:`~.AgilentB2900A.apply_voltage` can also be used. This will not enable source output. """,
         validator=strict_discrete_set,
         values={'current':'CURR', 'voltage':'VOLT'},
         map_values=True
@@ -55,25 +60,120 @@ class AgilentB2961A(Instrument):
         ":OUTP:STAT?",
         """ Reads a boolean value that is True if the source is enabled. """,
         cast=bool
-    )
+    ) # TODO verify response of this function, always returns `True`
 
      ###########
      # Current #
      ###########
 
-     current = Instrument.measure(
-        ":READ?",
-        """ Reads the current in Amps, if configured for this reading. """
-     )
-     current_range = Instrument.control(
+    current = Instrument.measurement(
+        ":MEAS:CURR?",
+        """ Returns the measured current in Amps. """
+    )
+    current_range = Instrument.control(
         ":SENS:CURR:RANG?",
         ":SENS:CURR:RANG:AUTO 0;:SENS:CURR:RANG %g",
-        """ A floating point property that controls the measurement current range in Amps, which can take values between -1.05e-3 and +1.05e-3 A. Auto-range is disabled when this property is set. """,
+        """ A floating point property that controls the measurement current range in Amps, which can take values between -105e-3 and +105e-3 A. Auto-range is disabled when this property is set. """,
         validator=truncated_range,
-        values=[-1.05e-3,1.05e-3]
-     )
-     current_nplc = Instrument.control(
+        values=[-105e-3,105e-3]
+    ) # TODO This times out
+    current_nplc = Instrument.control(
         ":SENS:CURR:NPLC?",
-        ":SENS:CURR:NPLC %g",
-        """ A floating point property that controls the number of power line cycles (NPLC) for the DC current measurements. This property sets the integration period and measurement speed. The input options are: `MIN`, `MAX`, `DEF`, or a numeric value between 4e-4 and 100 (50 Hz)/ 4.8e-4 and 120 (60 Hz). """
-     )
+        ":SENS:CURR:NPLC %s",
+        """ A floating point property that controls the number of power line cycles (NPLC) for the DC current measurements. This property sets the integration period and measurement speed. The input options are: `MIN`, `MAX`, `DEF`, or a numeric value between 4e-4 and 100 (50 Hz)/ 4.8e-4 and 120 (60 Hz). Values outside of these ranges are automatically trucated. """,
+        validator=joined_validators(strict_discrete_set, truncated_range),
+        values=[['MIN','DEF','MAX'],[4e-4,120]]
+    )
+    compliance_current = Instrument.control(
+        ":SENS:CURR:PROT:LEV?",
+        ":SENS:CURR:PROT:LEV %g",
+        """ A floating point property that controls the complaince current in Amps. """,
+        validator=truncated_range,
+        values=[-105e-3,105e-3]
+    ) # TODO validate
+    source_current = Instrument.control(
+        ":SOUR:CURR?",
+        ":SOUR:CURR:LEV %g",
+        """ A floating point property that controls the source current in Amps. """
+    )
+
+    ###########
+    # VOLTAGE #
+    ###########
+
+    voltage = Instrument.measurement(
+        ":MEAS:VOLT?",
+        """ Returns the measured voltage in Volts. """
+    )
+    voltage_range = Instrument.control(
+        ":SENS:VOLT:RANG?",
+        ":SENS:VOLT:RANG:AUTO 0;:SENS:VOLT:RANG %g",
+        """ A floating point property that controls the measurement voltage range in Volts, which can take values from -42 to 42 V. Auto-range is disabled when this property is set. """,
+        validator=truncated_range,
+        values=[-42,42]
+    ) # TODO This times out
+    voltage_range_auto = Instrument.control(
+        ":SENS:VOLT:RANG:AUTO:MODE?",
+        ":SENS:VOLT:RANG:AUTO 1;:SENS:VOLT:RANG:AUTO:MODE %s",
+        """ A string property to set the auto range mode for voltage measurements. Input options are: `NORM`, `RES` and `SPE`. The channel automatically sets the range """,
+        validator=strict_discrete_set,
+        values=('NORM','RES','SPE')
+    ) # TODO function does not work
+    voltage_nplc = Instrument.control(
+        ":SENS:VOLT:NPLC?",
+        ":SENS:VOLT:NPLC %s",
+        """ A floating point property that controls the number of power line cycles (NPLC) for the DC current measurements. This property sets the integration period and measurement speed. The input options are: `MIN`, `MAX`, `DEF`, or a numeric value between 4e-4 and 100 (50 Hz)/ 4.8e-4 and 120 (60 Hz). Values outside of these ranges are automatically trucated. """,
+        validator=joined_validators(strict_discrete_set, truncated_range),
+        values=[['MIN','DEF','MAX'],[4e-4,120]]
+    )
+    compliance_voltage = Instrument.control(
+        ":SENS:VOLT:PROT?",
+        ":SENS:VOLT:PROT %g",
+        """ A floating point property that controls the compliance voltage in Volts. """,
+        validator=truncated_range,
+        values=[-42, 42]
+    )
+    source_voltage = Instrument.control(
+        ":SOUR:VOLT?",
+        ":SOUR:VOLT:LEV %g",
+        """ A floating point property that controls the source voltage in Volts. """,
+        validator=truncated_range,
+        values=[-42,42]
+    )
+    source_voltage_range = Instrument.control(
+        ":SOUR:VOLT:RANG?",
+        ":SOUR:VOLT:RANG:AUTO 0;:SOUR:VOLT:RANG %g",
+        """ A floating point property that controls the source voltage range in Volts, which can take values from -42 to 42 V. Auto-range is disabled when this property is set. """,
+        validator=truncated_range,
+        values=[-42, 42]
+    )
+
+    ##############
+    # Resistance #
+    ##############
+
+    resistance = Instrument.measurement(
+        ":MEAS:RES?",
+        """ Reads the resistance in Ohms. """
+    )
+    resistance_range = Instrument.control(
+        ":SENS:RES:RANG?",
+        ":SENS:RES:RANG:AUTO 0;:SENS:RES:RANG %g",
+        """ A floating point property that controls the resistance range in Ohms, which can take values from 0 to 210 MOhms. Auto-range is disabled when this property is set. """,
+        validator=truncated_range,
+        values=[0, 210e6]
+    ) #TODO update values in doc str and values list
+    resistance_nplc = Instrument.control(
+        ":SENS:RES:NPLC?",
+        ":SENS:RES:NPLC %s",
+        """ A floating point property that controls the number of power line cycles (NPLC) for the DC current measurements. This property sets the integration period and measurement speed. The input options are: `MIN`, `MAX`, `DEF`, or a numeric value between 4e-4 and 100 (50 Hz)/ 4.8e-4 and 120 (60 Hz). Values outside of these ranges are automatically trucated. """,
+        validator=joined_validators(strict_discrete_set, truncated_range),
+        values=[['MIN','DEF','MAX'],[4e-4,120]]
+    )
+    resistance_connection = Instrument.control(
+        ":SENS:REM?",
+        ":SENS:REM %s",
+        """ A string property that controls the number of wires used in resistance meaasurments. Accepts a value of `ON` for the Kelvin (4 wire) connection or `OFF` for the standard (2 wire) connection. """,
+        validator=strict_discrete_set,
+        values={'ON','OFF'}
+    )
