@@ -56,11 +56,14 @@ class AgilentB2961A(Instrument):
         values={'current':'CURR', 'voltage':'VOLT'},
         map_values=True
     )
-    source_enabled = Instrument.measurement(
+    source_enable = Instrument.control(
         ":OUTP:STAT?",
-        """ Reads a boolean value that is True if the source is enabled. """,
-        cast=bool
-    ) # TODO verify response of this function, always returns `True`
+        ":OUTP %i",
+        """  """,
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=int
+    )
 
      ###########
      # Current #
