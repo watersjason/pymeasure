@@ -64,6 +64,14 @@ class AgilentB2961A(Instrument):
         values=(0,1),
         cast=int
     )
+    source_float = Instrument.control(
+        ":OUTP:LOW?",
+        ":OUTP:STAT 0;:OUTP:LOW %s",
+        """ A string property that selects the state of the low terminal. Sets the disables the source output when called to set the terminal state. """,
+        validator=strict_discrete_set,
+        values={"float":"FLO", "ground":"GRO"}
+        map_values=True
+    )
 
      ###########
      # Current #
@@ -80,6 +88,13 @@ class AgilentB2961A(Instrument):
         validator=truncated_range,
         values=[-105e-3,105e-3]
     ) # TODO This times out
+    current_auto_range = Instrument.control(
+        ":SENS:CURR:RANG:AUTO?",
+        ":SENS:CURR:RANG:AUTO %i",
+        """ An integer property that disables (0) or enables (1) the source current auto-range. """,
+        validator=strict_discrete_set,
+        values=(0,1)
+    )
     current_nplc = Instrument.control(
         ":SENS:CURR:NPLC?",
         ":SENS:CURR:NPLC %s",
@@ -115,7 +130,7 @@ class AgilentB2961A(Instrument):
         validator=truncated_range,
         values=[-42,42]
     ) # TODO This times out
-    voltage_range_auto = Instrument.control(
+    voltage_auto_range = Instrument.control(
         ":SENS:VOLT:RANG:AUTO:MODE?",
         ":SENS:VOLT:RANG:AUTO 1;:SENS:VOLT:RANG:AUTO:MODE %s",
         """ A string property to set the auto range mode for voltage measurements. Input options are: `NORM`, `RES` and `SPE`. The channel automatically sets the range """,
@@ -166,6 +181,13 @@ class AgilentB2961A(Instrument):
         validator=truncated_range,
         values=[0, 210e6]
     ) #TODO update values in doc str and values list
+    resistance_auto_range = Instrument.control(
+        ":SENS:RES:RANG:AUTO?",
+        ":SENS:RES:RANG:AUTO %i",
+        """ A property that controls the auto-range setting for the resistance measurement. Accepts input of 0 (disable) or 1 (enable auto-range). """,
+        validator=strict_discrete_set,
+        values=(0,1)
+    )
     resistance_nplc = Instrument.control(
         ":SENS:RES:NPLC?",
         ":SENS:RES:NPLC %s",
@@ -175,10 +197,10 @@ class AgilentB2961A(Instrument):
     )
     resistance_connection = Instrument.control(
         ":SENS:REM?",
-        ":SENS:REM %s",
-        """ A string property that controls the number of wires used in resistance meaasurments. Accepts a value of `ON` for the Kelvin (4 wire) connection or `OFF` for the standard (2 wire) connection. """,
+        ":SENS:REM %d",
+        """ A string property that controls the number of wires used in resistance meaasurments. Accepts a value of `1` for the Kelvin (4 wire) connection or `0` for the standard (2 wire) connection. """,
         validator=strict_discrete_set,
-        values={'ON','OFF'}
+        values={0,1}
     )
 
     ################
@@ -193,3 +215,151 @@ class AgilentB2961A(Instrument):
         values=[1, 100000],
         cast=int
     )
+
+    #
+    #
+    #
+
+    def __init__(self, adapter, **kwargs):
+        super(AgilentB2961A, self).__init__(adapter, "Agilent B2961A Source-Measurement Unit", **kwargs)
+
+    def enable_source(self):
+        """ Enables the source output. Depending on the instrument configuration, the source output is VOLT|CURR. """
+        self.source_enable(1)
+
+    def disable_source(self):
+        """ Disables the source output. """
+        self.source_enable(0)
+
+    def measure_resistance(self, nplc=10, resistance=2.1e5, auto_range=True, kelvin_connection=True):
+        """" Configures the measurement of resistance.
+
+        :param nplc: Number of power line cycles (NPLC) to integrate over; from 0.0004 to 100.
+        :param resistance: Upper limit of resistance in Ohms; from 0 MOhm to 210 MOhm. This value is ignored when :param auto_range: is True.
+        :param autorange: Enables auto_range of meter when True, else the upper limit is controlled by the value of :param resistance:.
+        :param kelvin_connection: Enables the 4-wire Kelvin resistance measurement. """"
+        log.info("%s is measuring resistance." % self.name)
+        self.write(":SENS:FUNC RES;:SENS:RES:MODE MAN;:FORM:ELEM:SENS RES")
+        self.resistance_nplc(nplc)
+        if auto_range:
+            self.resistance_auto_range(1)
+        else:
+            self.resistance_range = resistance
+        if kelvin_connection:
+            self.resistance_connection(1)
+        else:
+            self.resistance_connection(0)
+        self.check_errors()
+
+    def measure_voltage(self, nplc=10, voltage=42, auto_range=True):
+        """ Configures the measurement of voltage.
+
+        :param nplc: Number of power line cycles (NPLC) to integrate over; from 0.0004 to 100.
+        :param voltage: Upper limit of voltage in Volts; from -42 V to 42 V. This value is ignored when :param auto_range: is True.
+        :param autorange: Enables auto_range of meter when True, else the upper limit is controlled by the value of :param voltage:. """
+        log.info("%s is measuring voltage." % self.name)
+        self.write(":SENS:FUNC VOLT;:FORM:ELEM:SENS VOLT")
+        self.voltage_nplc(nplc)
+        if auto_range:
+            self.voltage_auto_range("NORM")
+        else:
+            self.voltage_range = voltage
+        self.check_errors()
+
+    def measure_current(self, nplc=10, current=10e-3, auto_range=True):
+        """ Configures the measurement of current.
+
+        :param nplc: Number of power line cycles (NPLC) from 0.0004 to 100.
+        :param current: Upper limit of current in Amps, from -105e-3 A and +105e-3 A.
+        :param auto_range: Enables auto_range if True, else uses the value set by :param current:. """
+        log.info("%s is measuring current." % self.name)
+        self.write(":SENS:FUNC 'CURR';:FORM:ELEM CURR")
+        self.current_nplc(nplc)
+        if auto_range:
+            self.current_auto_range(1)
+        else:
+            self.current_range(current)
+        self.check_errors()
+
+    def auto_range_source(self):
+        """ Configures the source to use the automatic range. """
+        if self.source_mode == 'current':
+            self.write(":SOUR:CURR:RANG:AUTO 1")
+        else:
+            self.write(":SOUR:VOLT:RANG:AUTO 1")
+
+    def apply_current(self, current_range=None, compliance_voltage=1):
+        """ Configures the instrument to apply a souce current and uses and auto-range unless a current range is specified. The compliance voltage is also set.
+
+        :param compliance_voltage: A float in the correct range for a :attr:`~.AgilentB2961A.compliance_voltage`.
+        :param current_range: A :attr:`~AgilentB2961A.current_range` value or None. """
+        log.info("%s is sourcing current." % self.name)
+        self.source_mode = "current"
+        if current_range is None:
+            self.auto_range_source()
+        else:
+            self.source_current_range = current_range
+        self.compliance_voltage = compliance_voltage
+        self.check_errors()
+
+    def apply_voltage(self, voltage_range=None, compliance_current=0.1):
+        """ Configures the instrument to apply a souce voltage and uses and auto-range unless a voltage range is specified. The compliance current is also set.
+
+        :param compliance_current: A float in the correct range for a :attr:`~.AgilentB2961A.compliance_current`.
+        :param voltage_range: A :attr:`~AgilentB2961A.voltage_range` value or None. """
+        log.info("%s is sourcing voltage." % self.name)
+        self.source_mode = "voltage"
+        if voltage_range is None:
+            self.auto_range_source()
+        else:
+            self.source_voltage_range = voltage_range
+        self.compliance_current = compliance_current
+        self.check_errors()
+
+    def beep(self, frequency, duration):
+        """ Sounds a system beep.
+
+        :param frequency: A frequency in Hz between 65 Hz and 2 MHz
+        :param duration: A time in seconds between 0 and 7.9 seconds
+        """
+        self.write(":SYST:BEEP %g, %g" % (frequency, duration))
+
+    def triad(self, base_frequency, duration):
+        """ Sounds a musical triad using the system beep.
+
+        :param base_frequency: A frequency in Hz between 65 Hz and 1.3 MHz
+        :param duration: A time in seconds between 0 and 7.9 seconds
+        """
+        self.beep(base_frequency, duration)
+        time.sleep(duration)
+        self.beep(base_frequency*5.0/4.0, duration)
+        time.sleep(duration)
+        self.beep(base_frequency*6.0/4.0, duration)
+
+    @property
+    def error(self):
+        """ Returns a tuple of an error code and message from a
+        single error. """
+        err = self.values(":SYST:ERR?")
+        if len(err) < 2:
+            err = self.read() # Try reading again
+        code = err[0]
+        message = err[1].replace('"', '')
+        return (code, message)
+
+    def check_errors(self):
+        """ Logs any system errors reported by the instrument. """
+        code, message = self.error
+        while code != 0:
+            t = time.time()
+            log.info("Agilent B2961a reported error: %d, %s" % (code, message))
+            code, message = self.error
+            if (time.time()-t)>10:
+                log.warning("Timed out for Agilent B2961a
+                 error retrieval.")
+
+    def reset(self):
+        """ Resets the instrument and clears the queue.  """
+        self.write("status:queue:clear;*RST;:stat:pres;:*CLS;")
+
+    def 
