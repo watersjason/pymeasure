@@ -180,3 +180,16 @@ class AgilentB2961A(Instrument):
         validator=strict_discrete_set,
         values={'ON','OFF'}
     )
+
+    ################
+    # Buffer Trace #
+    ################
+
+    buffer_points = Instrument.control(
+        ":TRAC:POIN?",
+        ":TRAC:POIN %d",
+        """ An integer property that controls the number of buffer points ALLOWED in the instrument trace. This does not represent the actual number of points stored in the buffer, but is instead the configuration value. Accepts values from 1 to 100000. Values outside of these ranges are automatically trucated to the nearest allowed value. """,
+        validator=truncated_range,
+        values=[1, 100000],
+        cast=int
+    )
