@@ -33,19 +33,16 @@ import time
 
 class AgilentB2961A(Instrument):
     """
-    Represent the Agilent/Keysight B2961A (with the ultra-low-noise option) source measurement units. Possibly will work with other units in the B2900 series, but only in the limited current/voltage source/measure ranges allowed by the B2961A.
+    Represent the Agilent/Keysight B2961A (with the ultra-low-noise option) source measurement units. For multi-channel units, channel 1 is used and any other channels are not supported.
+
+    Possibly will work with other units in the B2900 series, but only in the limited current/voltage source/measure ranges allowed by the B2961A.
 
     .. code-block:: python
 
-        source_measure_unit = AgilentB2900A("GPIB::1::INSTR")   # Esablish the HP/Agilent/Kesight B2900A source measurement device
-        source_measure_unit.apply_current()                     # Set up to source current
-        source_measure_unit.current_source_range = 10e-3        # Set the source current range to 10 mA
-        source_measure_unit.compliance_voltage = 10             # Set the source compliance voltage to 10 V
-        source_measure_unit.current_source = 0                  # Set the source current to 0 mA
-        source_measure_unit.enable_source()                     # Enable the source output
-        source_measure_unit.measure_voltage()                   # Set up to measure voltages
-        source_measure_unit.ramp_to_current(5e-3)               # Ramp the current to 5 mA
-        print(source_measure_unit.voltage)                      # print the measured voltage in voltages
+        source_measure_unit = AgilentB2900A("GPIB::1::INSTR")   # Esablish the Agilent/Kesight B2961A source measurement device
+
+        TODO
+
         source_measure_unit.shutdown()                          # Ramp the current to 0 mA and diable output
 
     """
@@ -66,7 +63,7 @@ class AgilentB2961A(Instrument):
     device_enable = Instrument.control(
         ":OUTP:STAT?",
         ":OUTP %i",
-        """  """,
+        """ TODO """,
         validator=strict_discrete_set,
         values=(0,1),
         cast=int
@@ -95,6 +92,11 @@ class AgilentB2961A(Instrument):
         values=(0,1),
         cast=int
     )
+    device_status_operation_condition = Instrument.measurement(
+        ":FORM:SREG ASC;:STAT:OPER:COND?",
+        """ TODO """,
+        cast=int
+    )
     output_off_mode = Instrument.control(
         ":OUTP:OFF:MODE?",
         ":OUTP:OFF:MODE %s",
@@ -119,81 +121,196 @@ class AgilentB2961A(Instrument):
         cast=int
     )
 
-    #################
-    # Arm / Trigger #
-    #################
+    #######################
+    # Arm / Trigger Count #
+    #######################
 
-    trigger_count_acq = Instrument.control(
+    trigger_count_measure = Instrument.control(
         ":TRIG:ACQ:COUN?",
-        ":TRIG:ACQ:COUN %g",
-        """ A property that controls the trigger count for the trigger-level acquisition data. """,
+        ":TRIG:ACQ:COUN %s",
+        """ An integer property (or string property representing an internally programmed default value) that configures the trigger count for the trigger-level measurement (acquisition) data. """,
         validator=joined_validators(strict_discrete_set,truncated_range),
-        values=[['MIN','DEF','MAX','INF'],[1,1e6]],
-        cast=int
+        values=[{'min':'MIN','default':'DEF','max':'MAX','infinity':'INF'},[1,1e6]]
     )
-    arm_count_acq = Instrument.control(
+    arm_count_measure = Instrument.control(
         ":ARM:ACQ:COUN?",
-        ":ARM:ACQ:COUN %g",
-        """ A property that controls the trigger count for the arm-level acquisition data. """,
-        validator=truncated_range,
-        values=(1,1e6),
-        cast=int
-    )
-    trigger_count_tran = Instrument.control(
-        ":TRIG:TRAN:COUN?",
-        ":TRIG:TRAN:COUN %g",
-        """ An integer/string property that controls the trigger count for transient data, which can take values of: 1 to 100,000|INF|MIN|MAX|DEF. """,
+        ":ARM:ACQ:COUN %s",
+        """ An integer property (or string property representing an internally programmed default value) that configures the trigger count for the arm-level measurement (acquisition) data. """,
         validator=joined_validators(strict_discrete_set,truncated_range),
-        values=[['MIN','DEF','MAX','INF'],[1,1e6]],
-        cast=int
+        values=[{'min':'MIN','default':'DEF','max':'MAX','infinityinfinity':'INF'},[1,1e6]]
     )
-    arm_count_tran = Instrument.control(
+    trigger_count_source = Instrument.control(
+        ":TRIG:TRAN:COUN?",
+        ":TRIG:TRAN:COUN %s",
+        """ An integer property (or string property representing an internally programmed default value) that configures the trigger count for the trigger-level source (transient) data. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','default':'DEF','max':'MAX','infinity':'INF'},[1,1e6]]
+    )
+    arm_count_source = Instrument.control(
         ":ARM:TRAN:COUN?",
-        ":ARM:TRAN:COUN %g",
-        """ A property that controls the trigger count for the arm-level transient data. """,
-        validator=truncated_range,
-        values=(1,1e6),
-        cast=int
+        ":ARM:TRAN:COUN %s",
+        """ An integer property (or string property representing an internally programmed default value) that configures the trigger count for the arm-level source (transient) data. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','default':'DEF','max':'MAX','infinity':'INF'},[1,1e6]]
     )
     trigger_count = Instrument.setting(
-        ":TRIG:COUN %g",
-        """ TODO """,
-        validator=truncated_range,
-        values=(1,1e6)
+        ":TRIG:COUN %s",
+        """  An integer property (or string property representing an internally programmed default value) that sets the trigger count for the trigger-level source (transient) and measurement (acquisition) data. """,
+        validator=joined_validators(strict_discrete_set, truncated_range),
+        values=[{'min':'MIN','default':'DEF','max':'MAX','infinity':'INF'},[1,1e6]]
     )
     arm_count = Instrument.setting(
-        ":ARM:COUN %g",
-        """ TODO """,
-        validator=truncated_range,
-        values=(1,1e6)
+        ":ARM:COUN %s",
+        """ An integer property (or string property representing an internally programmed default value) that sets the trigger count for the arm-level source (transient) and measurement (acquisition) data. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','default':'DEF','max':'MAX','infinity':'INF'},[1,1e6]]
     )
-    trigger_delay_acq = Instrument.control(
+
+    #######################
+    # Arm / Trigger Delay #
+    #######################
+
+    trigger_delay_measure = Instrument.control(
         ":TRIG:ACQ:DEL?",
-        ":TRIG:ACQ:DEL %i",
-        """ A delay, in seconds, for the trigger-level acquisition. """,
-        validator=truncated_range,
-        values=(0,1e6)
+        ":TRIG:ACQ:DEL %s",
+        """ A delay, in seconds, for the trigger-level measurement (acquisition) signals. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[0,1e6]],
+        cast=int
     )
-    arm_delay_acq = Instrument.control(
+    arm_delay_measure = Instrument.control(
         ":ARM:ACQ:DEL?",
-        ":ARM:ACQ:DEL %i",
-        """ A delay, in seconds, for the arm-level acquisition. """,
-        validator=truncated_range,
-        values=(0,1e6)
+        ":ARM:ACQ:DEL %s",
+        """ A delay, in seconds, for the arm-level measurement (acquisition) signals. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[0,1e6]],
+        cast=int
     )
-    trigger_delay_tran = Instrument.control(
+    trigger_delay_source = Instrument.control(
         ":TRIG:TRAN:DEL?",
-        ":TRIG:TRAN:DEL %i",
-        """ A delay, in seconds, for the trigger-level transient. """,
-        validator=truncated_range,
-        values=(0,1e6)
+        ":TRIG:TRAN:DEL %s",
+        """ A delay, in seconds, for the trigger-level source (transient) signals. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[0,1e6]],
+        cast=int
     )
-    arm_delay_tran = Instrument.control(
+    arm_delay_source = Instrument.control(
         ":ARM:TRAN:DEL?",
-        ":ARM:TRAN:DEL %i",
-        """ A delay, in seconds, for the arm-level transient. """,
-        validator=truncated_range,
-        values=(0,1e6)
+        ":ARM:TRAN:DEL %s",
+        """ A delay, in seconds, for the arm-level source (transient) signals. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[0,1e6]],
+        cast=int
+    )
+    trigger_delay = Instrument.setting(
+        ":TRIG:DEL %s",
+        """ A delay, in seconds, for the trigger-level measurement (acquire) and source (transient) signals. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[0,1e6]],
+        cast=int
+    )
+    arm_delay = Instrument.setting(
+        ":ARM:DEL %s",
+        """ A delay, in seconds, for the arm-level measurement (acquire) and source (transient) signals. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[0,1e6]],
+        cast=int
+    )
+
+    ########################
+    # Arm / Trigger Period #
+    ########################
+
+    trigger_period_measure = Instrument.control(
+        ":TRIG:ACQ:TIM?",
+        ":TRIG:ACQ:TIM %s",
+        """ A float property (or string property representing an internally programmed default value) that configures the period/interval (in seconds) of the trigger-level signal for the specified measurement device action. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[2e-5,1e5]]
+    )
+    arm_period_measure = Instrument.control(
+        ":ARM:ACQ:TIM?",
+        ":ARM:ACQ:TIM %s",
+        """ A float property (or string property representing an internally programmed default value) that configures the period/interval (in seconds) of the arm-level signal for the specified measurement device action. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[2e-5,1e5]]
+    )
+    trigger_period_source = Instrument.control(
+        ":TRIG:TRAN:TIM?",
+        ":TRIG:TRAN:TIM %s",
+        """ A float property (or string property representing an internally programmed default value) that configures the period/interval (in seconds) of the trigger-level signal for the specified source device action. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[2e-5,1e5]]
+    )
+    arm_period_source = Instrument.control(
+        ":ARM:TRAN:TIM?",
+        ":ARM:TRAN:TIM %s",
+        """ A float property (or string property representing an internally programmed default value) that configures the period/interval (in seconds) of the arm-level signal for the specified source device action. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[2e-5,1e5]]
+    )
+    trigger_period = Instrument.setting(
+        ":TRIG:TIM %s",
+        """ A float property (or string property representing an internally programmed default value) that sets the period/interval (in seconds) of the trigger-level signal for the specified source and measurement device actions. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[2e-5,1e5]]
+    )
+    arm_period = Instrument.setting(
+        ":ARM:TIM %s",
+        """ A float property (or string property representing an internally programmed default value) that sets the period/interval (in seconds) of the arm-level signal for the specified source and measurement device actions. """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[{'min':'MIN','max':'MAX','default':'DEF'},[2e-5,1e5]]
+    )
+
+    ########################
+    # Arm / Trigger Signal #
+    ########################
+
+    trigger_signal_measure = Instrument.control(
+        ":TRIG:ACQ:SOUR?",
+        ":TRIG:ACQ:SOUR %s",
+        """ A string property that selects the trigger-level measure signal to enable a specified device action. """,
+        validator=strict_discrete_set,
+        values={'auto':'AINT','bus':'BUS','time':'TIM','internal_1':'INT1','internal_2':'INT2','lan':'LAN','external_1':'EXT1','external_2':'EXT2','external_3':'EXT3','external_4':'EXT4','external_5':'EXT5','external_6':'EXT6','external_7':'EXT7','external_8':'EXT8','external_9':'EXT9','external_10':'EXT10','external_11':'EXT11','external_12':'EXT12','external_13':'EXT13','external_14':'EXT14'},
+        map_values=True
+    )
+    arm_signal_measure = Instrument.control(
+        ":ARM:ACQ:SOUR?",
+        ":ARM:ACQ:SOUR %s",
+        """ A string property that selects the arm-level measure signal to enable a specified device action. """,
+        validator=strict_discrete_set,
+        values={'auto':'AINT','bus':'BUS','time':'TIM','internal_1':'INT1','internal_2':'INT2','lan':'LAN','external_1':'EXT1','external_2':'EXT2','external_3':'EXT3','external_4':'EXT4','external_5':'EXT5','external_6':'EXT6','external_7':'EXT7','external_8':'EXT8','external_9':'EXT9','external_10':'EXT10','external_11':'EXT11','external_12':'EXT12','external_13':'EXT13','external_14':'EXT14'},
+        map_values=True
+    )
+    trigger_signal_source = Instrument.control(
+        ":TRIG:TRAN:SOUR?",
+        ":TRIG:TRAN:SOUR %s",
+        """ A string property that selects the trigger-level source signal to enable a specified device action. """,
+        validator=strict_discrete_set,
+        values={'auto':'AINT','bus':'BUS','time':'TIM','internal_1':'INT1','internal_2':'INT2','lan':'LAN','external_1':'EXT1','external_2':'EXT2','external_3':'EXT3','external_4':'EXT4','external_5':'EXT5','external_6':'EXT6','external_7':'EXT7','external_8':'EXT8','external_9':'EXT9','external_10':'EXT10','external_11':'EXT11','external_12':'EXT12','external_13':'EXT13','external_14':'EXT14'},
+        map_values=True
+    )
+    arm_signal_source = Instrument.control(
+        ":ARM:TRAN:SOUR?",
+        ":ARM:TRAN:SOUR %s",
+        """ A string property that selects the arm-level source signal to enable a specified device action. """,
+        validator=strict_discrete_set,
+        values={'auto':'AINT','bus':'BUS','time':'TIM','internal_1':'INT1','internal_2':'INT2','lan':'LAN','external_1':'EXT1','external_2':'EXT2','external_3':'EXT3','external_4':'EXT4','external_5':'EXT5','external_6':'EXT6','external_7':'EXT7','external_8':'EXT8','external_9':'EXT9','external_10':'EXT10','external_11':'EXT11','external_12':'EXT12','external_13':'EXT13','external_14':'EXT14'},
+        map_values=True
+    )
+    trigger_signal = Instrument.setting(
+        ":TRIG:SOUR %s",
+        """ A string property that sets the trigger-level measure and source signals to enable a specified device action. """,
+        validator=strict_discrete_set,
+        values={'auto':'AINT','bus':'BUS','time':'TIM','internal_1':'INT1','internal_2':'INT2','lan':'LAN','external_1':'EXT1','external_2':'EXT2','external_3':'EXT3','external_4':'EXT4','external_5':'EXT5','external_6':'EXT6','external_7':'EXT7','external_8':'EXT8','external_9':'EXT9','external_10':'EXT10','external_11':'EXT11','external_12':'EXT12','external_13':'EXT13','external_14':'EXT14'},
+        map_values=True
+    )
+    arm_signal = Instrument.setting(
+        ":ARM:SOUR %s",
+        """ A string property that sets the arm-level measure and source signals to enable a specified device action. """,
+        validator=strict_discrete_set,
+        values={'auto':'AINT','bus':'BUS','time':'TIM','internal_1':'INT1','internal_2':'INT2','lan':'LAN','external_1':'EXT1','external_2':'EXT2','external_3':'EXT3','external_4':'EXT4','external_5':'EXT5','external_6':'EXT6','external_7':'EXT7','external_8':'EXT8','external_9':'EXT9','external_10':'EXT10','external_11':'EXT11','external_12':'EXT12','external_13':'EXT13','external_14':'EXT14'},
+        map_values=True
     )
 
      ###########
@@ -254,7 +371,7 @@ class AgilentB2961A(Instrument):
     voltage_nplc = Instrument.control(
         ":SENS:VOLT:NPLC?",
         ":SENS:VOLT:NPLC %s",
-        """ A floating point property that controls the number of power line cycles (NPLC) for the DC current measurements. This property sets the integration period and measurement speed. The input options are: `MIN`, `MAX`, `DEF`, or a numeric value between 4e-4 and 100 (50 Hz)/ 4.8e-4 and 120 (60 Hz). Values outside of these ranges are automatically trucated. """,
+        """ A floating point property that controls the number of power line cycles (NPLC) for the DC voltage measurements. This property sets the integration period and measurement speed. The input options are: `MIN`, `MAX`, `DEF`, or a numeric value between 4e-4 and 100 (50 Hz)/ 4.8e-4 and 120 (60 Hz). Values outside of these ranges are automatically trucated. """,
         validator=joined_validators(strict_discrete_set, truncated_range),
         values=[['MIN','DEF','MAX'],[4e-4,120]]
     )
@@ -344,7 +461,7 @@ class AgilentB2961A(Instrument):
         validator=truncated_range,
         values=[1, 100000],
         cast=int
-    ) # TODO test
+    )
     buffer_length = Instrument.measurement(
         ":TRAC:POIN:ACT?",
         """ An integer property representing the actual number of points in the trace buffer. """,
@@ -357,7 +474,7 @@ class AgilentB2961A(Instrument):
         validator=strict_discrete_set,
         values={"sense":"SENS","math":"MATH","limit":"LIM"},
         map_values=True
-    ) # TODO test
+    )
     buffer_control = Instrument.control(
         "TRAC:FEED:CONT?",
         "TRAC:FEED:CONT %s",
@@ -365,7 +482,33 @@ class AgilentB2961A(Instrument):
         validator=strict_discrete_set,
         values={"next":"NEXT","never":"NEV"},
         map_values=True
-    ) # TODO test
+    )
+    buffer_get_data = Instrument.measurement(
+        ":TRAC:DATA?",
+        """ Reads the data from the trace buffer and returns the buffer data as a comma-seperated string. Control over which data is passed by the output is achieved with :attr:`~AgilentB2961A.buffer_data_header`.""",
+        cast=float
+    )
+    buffer_data_header = Instrument.control(
+        ":FORM:ELEM:SENS?",
+        ":FORM:ELEM:SENS %s",
+        """ A string attribute that describes which data is passed into the output of the query for the buffer data by  :attr:`~AgilentB2961A.buffer_get_stat_data_string`. """,
+        validator=strict_discrete_set,
+        values={"voltage":"VOLT","current":"CURR","resistance":"RES","time":"TIME","status":"STAT","source":"SOUR","electrical":"VOLT,CURR,RES","physical":"VOLT,CURR,RES,TIME","all":"VOLT,CURR,RES,TIME,STAT,SOUR"},
+        map_values=True
+    )
+    buffer_get_stat_data = Instrument.measurement(
+        ":TRAC:STAT:DATA?",
+        """ Reads the statisical data from the trace buffer and returns the buffer data as a comma-seperated string. Control over which data is passed by the output is achieved with :attr:`~AgilentB2961A.buffer_stat_data_header`. """,
+        cast=float
+    )
+    buffer_stat_data_header = Instrument.control(
+        ":TRAC:STAT:FORM?",
+        ":TRAC:STAT:FORM %s",
+        """ A string attribute that describes which data is passed into the output of the query for the buffer statisical data by  :attr:`~AgilentB2961A.buffer_get_stat_data_string`. """,
+        validator=strict_discrete_set,
+        values={"mean":"MEAN","std_dev":"SDEV","range":"PKPK","min":"MIN","max":"MAX"},
+        map_values=True
+    )
 
     #
     #
@@ -377,6 +520,11 @@ class AgilentB2961A(Instrument):
         )
 
         self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
+
+    @property
+    def buffer_clear(self):
+        """ Clears data in the device trace buffer. """
+        self.write(":TRAC:FEED:CONT NEV;:TRAC:CLE")
 
     def enable_source(self):
         """ Enables the source output. Depending on the instrument configuration, the source output is VOLT|CURR. """
@@ -427,7 +575,7 @@ class AgilentB2961A(Instrument):
         self.current_nplc = nplc
         self.check_errors()
 
-    def auto_range_source(self):
+    def source_auto_range(self):
         """ Configures the source to use automatic ranging by :attr:`~AgilentB2961A.current_source_range_auto` or :attr:`~AgilentB2961A.voltage_source_range_auto`. """
         if self.source_mode == 'current':
             self.current_source_range_auto=1
@@ -492,14 +640,6 @@ class AgilentB2961A(Instrument):
         """ Resets the instrument and clears the queue.  """
         self.write("status:queue:clear;*RST;:stat:pres;:*CLS;")
 
-    def status_byte(self):
-        """ TODO """
-        return(self.ask("*STB?"))
-
-    def trigger(self):
-        """ TODO """
-        self.write("*TRG")
-
     def timeout(self, milliseconds=None):
         """ Returns timeout value when :param milliseconds: is None, or sets new value when a :param milliseconds: value is passed. """
         if timeout is None:
@@ -508,15 +648,40 @@ class AgilentB2961A(Instrument):
             self.adapter.connection.timeout=milliseconds
 
     @property
+    def status_byte(self):
+        """ TODO """
+        return(self.ask(":FORM:SREG ASC;*STB?"))
+
+    @property
+    def trigger_is_idle(self):
+        """ Checks the status of the specified device action and WAITS until the status is changed to idle. """
+        if self.device_status_operation_condition == 1170:
+            if self.ask(":IDLE?"):
+                return((1,'Trigger in idle state.'))
+            else:
+                return(0, 'Trigger not in idle state.')
+        else:
+            return((0, 'Trigger not in idle state.'))
+
+    @property
+    def trigger(self):
+        """ TODO """
+        self.write(":ARM;:TRIG;:INIT;*TRG")
+
+    @property
+    def trigger_abort(self):
+        """ Aborts the specified device action. Trigger status is set to idle. """
+        self.write(":ABOR")
+
+    @property
     def error(self):
-        """ Returns a tuple of an error code and message from a
-        single error. """
+        """ Reads and removes the top item in the error queue and returns a tuple of an error code and message from the single error. """
         err = self.values(":SYST:ERR?")
         if len(err) < 2:
             err = self.read() # Try reading again
         code = err[0]
         message = err[1].replace('"', '')
-        return (code, message)
+        return(code, message)
 
     def check_errors(self):
         """ Logs any system errors reported by the instrument. """
