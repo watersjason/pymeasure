@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument
-from pymeasure.instruments.validators import truncated_range, strict_discrete_set, joined_validators
+from pymeasure.instruments.validators import truncated_range, strict_discrete_set, joined_validators, truncated_discrete_set
 
 import time
 
@@ -45,12 +45,90 @@ class Agilent3458A(Instrument):
 
     """
 
+    ##########
+    # Device #
+    ##########
+
+    identify = Instrument.measurement(
+        "ID?",
+        """ Returns the device ID. """
+    )
+    lock_out = Instrument.command(
+        "LOCK?",
+        "LOCK %g",
+        """ An integer parameter that turns the front panel keyboard `on` or `off`. """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1},
+        map_values=True
+    )
+    output_format = Instrument.command(
+        "OFORMAT?",
+        "OFORMAT %g",
+        """ A string parameter that sets the multimeter output format. """,
+        validator=strict_discrete_set,
+        values={'ascii':1,'sint':2,'dint':3,'sreal':4,'dreal':5},
+        map_values=True
+    )
+    options_installed = Instrument.measurement(
+        "OPT?",
+        """ A string parameter that returns the physically installed options. """,
+        validator=strict_discrete_set,
+        values={'none':0,'extended_memory':1},
+        map_values=True
+    )
+    preset_state = Instrument.measurement(
+        "PRESET?",
+        "PRESET %g",
+        """ A string parameter which puts the multimeter into an internally defined state. """,
+        validator=strict_discrete_set,
+        values={'fast':0,'normal':1,'digital':2},
+        map_values=True
+    )
+    query_format = Instrument.command(
+        "QFORMAT?",
+        "QFORMAT %s",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'number':'NUM','normal':'NORM','alpha':'ALPHA'},
+        map_values=True
+    )
+    #TODO RESET
+    device_revision = Instrument.measurement(
+        "REV?",
+        """ A string property with the master and slave processor firmware revisions. """
+    )
+    # TODO TEST
+    # TODO RQS Needs bit mapping feature
+    service_request = Instrument.setting(
+        "SRQ %g",
+        """ An integer parameter that sets the status register bit 2. If bit 2 is enabled to assert the GPIB service request, then it is also set. """,
+    ) # TODO service_request validator
+    status = Instrument.measurement(
+        "STB?",
+        """ An integer parameter that represents the bits returned from the status byte query. """
+    )
+    temperature = Instrument.measurement(
+        "TEMP?",
+        """ A parameter that represents the internally measured multimeter temperature in degrees Centigrade. """
+    )
+    terminals = Instrumnet.measurement(
+        "TERM?",
+        """ A string parameter of `FRONT` or `REAR` that designates which terminals are selected. """
+    )
+
     ###############
     # Calibration #
     ###############
 
+    calibration_external = Instrument.setting(
+        "CAL %g",
+        """ The value sent with the CAL command must exactly equal the actual output value of the adjustment source. It is recommended that 10V be used for CAL 10 and 10K ohms be used for CAL 10E3.
+
+        Any standard value between 1 V and 12 V or 1k ohms and 12k ohms can be used. A value less than 10 V or less than 10k ohms will introduce additional uncertainty to the multimeter's accuracy specifications. """
+    ) #TODO calibration_external validator, needs bit mapping feature
+    # TODO CAL?
     calibration_internal = Instrument.setting(
-        "ACAL %i",
+        "ACAL %g",
         """ A string property that instructs the multimeter to perform a specified type of internal self calibration. Calibration security must be removed by :meth:`~Agilent3458A.calibration_secure`. """,
         validator=strict_discrete_set,
         values={'all':0, 'dc':1, 'ac':2, 'resistance':4},
@@ -76,11 +154,194 @@ class Agilent3458A(Instrument):
         "TEMP?",
         """ Returns the internal temperature of the multimeter in degrees C. """
     )
-    device_revision = Instrument.measurement(
-        "REV?",
-        """ A string property with the master and slave processor firmware revisions. """
+
+    ###############
+    # Measurement #
+    ###############
+
+    range_auto = Instrument.command(
+        "ARANGE?",
+        "ARANGE %g",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1,'once':2},
+        map_values=True
+    )
+    auto_zero = Instrument.command(
+        "AZERO?",
+        "AZERO %g",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1,'once':2},
+        map_values=True
+    )
+    fix_input_impedance = Instrument.command(
+        "FIXEDZ?",
+        "FIXEDZ %g",
+        """ An integer parameter that turns the fixed input resistance function for DC voltage measurements `on` or `off`. When enabled, the multimeter maintains its input resistance at 10e6 ohms for all ranges. """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1},
+        map_values=True
+    )
+    integer_scale_factor = Instrument.measurement(
+        "ISCALE?",
+        """ Returns the scale factor for the internal conversion from the intger (`SINT`, `DINT`) formats to the real (`ASCII`, `SREAL`, `DREAL`) formats. Multiplying the integer values by this factor returns the actual values. """
+    )
+    line_frequency = Instrument.measurement(
+        "LINE?",
+        """ Returns the AC line frequency. """
+    )
+    digits = Instrument.command(
+        "NDIG?",
+        "NDIG %g",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values=(list(range(3,9,1)))
+    )
+    nplc = Instrument.command(
+        "NPLC?",
+        "NPLC %g",
+        """ An integer parameter that sets the number of power line cycles over which the A/D converter integrates the input signal. """,
+        validator=strict_discrete_set,
+        values=(list(range(0,10,1)) + list(range(10,1001,10)))
+    )
+    offset_compensation_state = Instrument.command(
+        "OCOMP?",
+        "OCOMP %g",
+        """ A string parameter that switches the state of the offset resistance compensation function. """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1},
+        map_values=True
+    )
+    #TODO RANGE
+    measure_ratio_state = Instrument.command(
+        "RATIO?",
+        "RATIO %g",
+        """ A string parameter that instructs the multimeter to measure a DC reference voltage applied to the Sense terminals and a signal voltage applied to the Input terminals. The ratio is calculated as input_resistance / sense_resistance. """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1},
+        map_values=True
+    )
+    ac_voltage_mode = Instrument.command(
+        "SETACV?",
+        "SETACV %g",
+        """ A string parameter for the AC/AC+DC voltage conversion method. """,
+        validator=strict_discrete_set,
+        values={"analog":0,"rand_sampling":1,"sync_sampling":2},
+        map_values=True
+    )
+    # TODO tone
+
+
+    ###############
+    # Subsampling #
+    ###############
+
+    # TODO subsampling commands
+    # TODO SSAC
+    # TODO SSDC
+    # TODO SSPARM?
+    # TODO SSRC
+    # TODO SSTATE
+    # TODO SUB
+    # TODO SUBEND
+
+    ########
+    # MATH #
+    ########
+
+    # TODO NULL
+    # TODO STAT
+    math_recall = Instrument.setting(
+        "RMATH %g",
+        """ A string parameter that recalls and returns the math register contents. """,
+        validator=strict_discrete_set,
+        values={'degree':1,'lower_bound':2,'max_pfail':3,'mean':4,'min_pfail':5,'number_sample':6,'null_offset':7,'perc':8,'reference_value':9,'reference_impedance':10,'scale_divisor':11,'standard_deviation':12,'upper_bound':13,'number_pfail':15},
+        map_values=True
+    )
+    # TODO SMATH
+
+    #########
+    # Error #
+    #########
+
+    #TODO EMASK
+    #TODO ERR?
+    #TODO ERRSTR?
+
+    ##############
+    # Triggering #
+    ##############
+
+    trigger_delay = Instrument.command(
+        "DELAY?",
+        "DELAY %g",
+        """ TODO """,
+        validator=joined_validators(strict_discrete_set,truncated_range),
+        values=[[-1,0],[1e-7,6000]]
+    )
+    trigger_num_readings = Instrument.command(
+        "NRDGS?",
+        "NRDGS %g",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'auto':1,'external':2,'sync':5,'timer':6,'level':7,'line':8},
+        map_values=True
+    )
+    # TODO SWEEP
+    # TODO TARM
+    trigger_buffer_state = Instrument.command(
+        "TBUFF?",
+        "TBUFF %g",
+        """ A boolean parameter to enable or disable the trigger buffer. When enabled, the trigger is buffered to avoid the error: `TRIGGER TOO FAST`. """,
+        validator=strict_discrete_set
+        values=[False,True],
+        map_values={False:0,True:1},
+        cast=bool
+    )
+    # TODO TIMER
+    trigger = Instrument.command(
+        "TRIG?",
+        "TRIG %g",
+        """ A string parameter that specifies the trigger control event. """,
+        validator=strict_discrete_set,
+        values={'auto':1,'external':1,'single':2,'hold':4,'sync':5,'level':6,'line':7},
+        map_values=True
     )
 
+    ##########
+    # Buffer #
+    ##########
+
+    buffer_state = Instrument.control(
+        "INBUF?",
+        "INBUF %g",
+        """ An integer parameter that sets the input buffer `off` or `on`.  """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1},
+        map_values=True
+    )
+    buffer_count = Instrument.measurement(
+        "MCOUNT?",
+        """ Returns the total number of stored readings. """
+    )
+    memory_state = Instrument.control(
+        "MEM?",
+        "MEM %g",
+        """ Enables or disables reading memory and designates the storage mode. """,
+        validator=strict_discrete_set,
+        values={'off':0,'lifo':1,'fifo':2,'cont':3},
+        map_values=True
+    )
+    memory_format = Instrument.control(
+        "MFORMAT?",
+        "MFORMAT %g",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'ascii':1,'sint':2,'dint':3,'sreal':4,'dreal:5'},
+        map_values=True
+    )
+    # TODO RMEM
 
     #
     #
