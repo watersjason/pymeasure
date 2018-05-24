@@ -35,7 +35,7 @@ class AgilentB2961A(Instrument):
     """
     Represent the Agilent/Keysight B2961A (with the ultra-low-noise option) source measurement units. For multi-channel units, channel 1 is used and any other channels are not supported.
 
-    Possibly will work with other units in the B2900 series, but only in the limited current/voltage source/measure ranges allowed by the B2961A.
+    Might work with other units in the B2900 series, but only in the limited current/voltage source/measure ranges allowed by the B2961A.
 
     .. code-block:: python
 
@@ -45,7 +45,7 @@ class AgilentB2961A(Instrument):
 
         source_measure_unit.source_mode = 'current'             # Set the output to current
 
-        source_measure_unit.current_source = 10e-3              # Set the source output current to 10 mA
+        source_measure_unit.current_source_level = 10e-3              # Set the source output current to 10 mA
 
         source_measure_unit.enable_source                       # Enable source output of the 10 mA current signal
 
@@ -97,6 +97,21 @@ class AgilentB2961A(Instrument):
         validator=strict_discrete_set,
         values=(0,1),
         cast=int
+    )
+    device_nplc = Instrument.control(
+        ":SENS:CURR:NPLC?",
+        ":SENS:CURR:NPLC %s",
+        """ A floating point property that controls the number of power line cycles (NPLC) for the DC current measurements. This property sets the integration period and measurement speed. NPLC is a common value for the current, voltage and resistance measurements. """,
+        validator=joined_validators(strict_discrete_set, truncated_range),
+        values=[['MIN','DEF','MAX'],[4e-4,120]]
+    )
+    device_nplc_auto = Instrument.control(
+        ":SENS:CURR:NPLC:AUTO?",
+        ":SENS:CURR:NPLC:AUTO %g",
+        """ A boolean parameter that enables or disables the auto NPLC function. When enables, the NPLC is calculated from the measurement range. Auto-NPLC is a common value for the current, voltage and resistance measurements. """,
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=bool
     )
     device_status_operation_condition = Instrument.measurement(
         ":FORM:SREG ASC;:STAT:OPER:COND?",
@@ -328,13 +343,6 @@ class AgilentB2961A(Instrument):
         ":MEAS:CURR?",
         """ Returns the measured current in Amps. """
     )
-    current_nplc = Instrument.control(
-        ":SENS:CURR:NPLC?",
-        ":SENS:CURR:NPLC %s",
-        """ A floating point property that controls the number of power line cycles (NPLC) for the DC current measurements. This property sets the integration period and measurement speed. """,
-        validator=joined_validators(strict_discrete_set, truncated_range),
-        values=[['MIN','DEF','MAX'],[4e-4,120]]
-    )
     current_compliance = Instrument.control(
         ":SENS:CURR:PROT:LEV?",
         ":SENS:CURR:PROT:LEV %g",
@@ -347,10 +355,15 @@ class AgilentB2961A(Instrument):
         """ A boolean property that indicates if the current is in the compliance state or not. """,
         cast=bool
     )
-    current_source = Instrument.control(
+    current_source_level = Instrument.control(
         ":SOUR:CURR?",
         ":SOUR:CURR %g",
         """ A floating point property that controls the source current level in Amps. """
+    )
+    current_source_level_trigger = Instrument.control(
+        ":SOUR:CURR:TRIG?",
+        ":SOUR:CURR:TRIG %g",
+        """ A floating point property that controls the source current level for the triggered device in Amps. """
     )
     current_source_range = Instrument.control(
         ":SOUR:CURR:RANG?",
@@ -375,13 +388,6 @@ class AgilentB2961A(Instrument):
         ":MEAS:VOLT?",
         """ Returns the measured voltage in Volts. """
     )
-    voltage_nplc = Instrument.control(
-        ":SENS:VOLT:NPLC?",
-        ":SENS:VOLT:NPLC %s",
-        """ A floating point property that controls the number of power line cycles (NPLC) for the DC voltage measurements. This property sets the integration period and measurement speed. """,
-        validator=joined_validators(strict_discrete_set, truncated_range),
-        values=[['MIN','DEF','MAX'],[4e-4,120]]
-    )
     voltage_compliance = Instrument.control(
         ":SENS:VOLT:PROT?",
         ":SENS:VOLT:PROT %g",
@@ -394,10 +400,17 @@ class AgilentB2961A(Instrument):
         """ A boolean property that indicates if the voltage is in the compliance state or not. """,
         cast=bool
     )
-    voltage_source = Instrument.control(
+    voltage_source_level = Instrument.control(
         ":SOUR:VOLT?",
         ":SOUR:VOLT %g",
         """ A floating point property that controls the source voltage level in Volts. """,
+        validator=truncated_range,
+        values=[-42,42]
+    )
+    voltage_source_level_trigger = Instrument.control(
+        ":SOUR:VOLT:TRIG?",
+        ":SOUR:VOLT:TRIG %g",
+        """ A floating point property that controls the source voltage level for the triggered device in Volts. """,
         validator=truncated_range,
         values=[-42,42]
     )
@@ -425,13 +438,6 @@ class AgilentB2961A(Instrument):
         ":MEAS:RES?",
         """ Reads the resistance in Ohms. """
     )
-    resistance_nplc = Instrument.control(
-        ":SENS:RES:NPLC?",
-        ":SENS:RES:NPLC %s",
-        """ A floating point property that controls the number of power line cycles (NPLC) for the DC current measurements. This property sets the integration period and measurement speed. """,
-        validator=joined_validators(strict_discrete_set, truncated_range),
-        values=[['MIN','DEF','MAX'],[4e-4,120]]
-    )
     resistance_connection = Instrument.control(
         ":SENS:REM?",
         ":SENS:REM %d",
@@ -455,11 +461,10 @@ class AgilentB2961A(Instrument):
 
     buffer_points = Instrument.control(
         ":TRAC:POIN?",
-        ":TRAC:POIN %d",
+        ":TRAC:POIN %s",
         """ An integer property that controls the number of buffer points ALLOWED in the instrument trace. This does not represent the actual number of points stored in the buffer, but is instead the configuration value. """,
-        validator=truncated_range,
-        values=[1, 1e6],
-        cast=int
+        validator=joined_validators(truncated_range,strict_discrete_set),
+        values=[[1, 1e6],{'max':'MAX','min':'MIN','default':'DEF'}],
     )
     buffer_length = Instrument.measurement(
         ":TRAC:POIN:ACT?",
@@ -516,24 +521,19 @@ class AgilentB2961A(Instrument):
 
         self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
 
-    def trigger_configure(self, source_mode, source_level, compliance_level,
-     measure_mode="all", nplc=10, kelvin_connection=True, compensation=False,
-      clear_buffer=True, buffer_points=1e6, buffer_feed="sense",
-      trigger_count="infinity", trigger_delay=0, trigger_period=1, trigger_signal="auto",
-        arm_count=1, arm_delay=0, arm_period=1, arm_signal="auto",
-         output_off_mode="normal", output_auto_out_enable=None,
-          output_auto_out_disable=None):
+    def trigger_configure(self, source_mode, source_level, compliance_level, measure_mode='all', nplc='auto', kelvin_connection=True, compensation=False, device_float='float', clear_buffer=True, buffer_points='max', buffer_feed='sense', buffer_control='next', trigger_count='infinity', trigger_delay=0, trigger_period=1, trigger_signal='auto', arm_count='min', arm_delay=0, arm_period='default', arm_signal='auto', output_off_mode='normal', output_auto_out_enable=1, output_auto_out_disable=0):
         """ A convenience function to configure the device for triggering a source-measure event and the measurement data collected in the buffer.
 
         :param source_mode: A :attr:`~AgilentB2961A.source_mode` value.
-        :param source_level: Depending on :param source_mode:, the value is interpreted as a :attr:`~AgilentB2961A.current_source` (amperes) or :attr:`~AgilentB2961A.voltage_source` (volts) value.
+        :param source_level: Depending on :param source_mode:, the value is interpreted as a :attr:`~AgilentB2961A.current_source_level` (amperes) or :attr:`~AgilentB2961A.voltage_source_level` (volts) value.
         :param compliance_level: Depending on :param source_mode:, the value is interpreted as a :attr:`~AgilentB2961A.current_compliance` (amperes) or :attr:`~AgilentB2961A.voltage_compliance` (volts) value.
         :param measure_mode: A :attr:`~AgilentB2961A.measure_mode` value.
-        :param nplc: A value that configures the :attr:`~AgilentB2961A.current_nplc`, :attr:`~AgilentB2961A.voltage_nplc`, and :attr:`~AgilentB2961A.resistance_nplc`.
+        :param nplc: A value that configures the :attr:`~AgilentB2961A.device_nplc`, :attr:`~AgilentB2961A.device_nplc`, and :attr:`~AgilentB2961A.device_nplc`.
         :param kelvin_connection: A :attr:`~AgilentB2961A.resistance_connection` value.
         :param compensation: A :attr:`~AgilentB2961A.resistance_compensation` value.
         :param buffer_points: A :attr:`~AgilentB2961A.buffer_points` value.
         :param buffer_feed: A :attr:`~AgilentB2961A.buffer_feed` value.
+        :param buff_control: A :attr:`~AgilentB2961A.buffer_control` value.
         :param trigger_count: A :attr:`~AgilentB2961A.trigger_count` value.
         :param trigger_delay: A :attr:`~AgilentB2961A.trigger_delay` value.
         :param trigger_period: A :attr:`~AgilentB2961A.trigger_period` value.
@@ -548,43 +548,60 @@ class AgilentB2961A(Instrument):
         """
         self.source_mode=source_mode
         if source_mode is 'current':
-            self.current_source=source_level
+            self.current_source_level=source_level
+            self.current_source_level_trigger=source_level
             self.voltage_compliance=compliance_level
             self.current_source_range_auto=1
         else:
-            self.voltage_source=source_level
+            self.voltage_source_level=source_level
+            self.voltage_source_level_trigger=source_level
             self.current_compliance=compliance_level
             self.voltage_source_range_auto=1
-        self.current_nplc=nplc
-        self.voltage_nplc=nplc
-        self.resistance_nplc=nplc
+
+        self.write(':SENS:FUNC:ALL')
+
+        if nplc == 'auto':
+            self.device_nplc_auto=True
+        else:
+            self.device_nplc=nplc
+
         self.resistance_connection=kelvin_connection
         self.resistance_compensation=compensation
-        self.buffer_clear=clear_buffer
+        self.device_float=device_float
+
+        if clear_buffer:
+            self.buffer_clear
         self.buffer_points=buffer_points
         self.buffer_feed=buffer_feed
+        self.buffer_control=buffer_control
+
         self.trigger_count=trigger_count
         self.trigger_delay=trigger_delay
         self.trigger_period=trigger_period
         self.trigger_signal=trigger_signal
+
         self.arm_count=arm_count
         self.arm_delay=arm_delay
         self.arm_period=arm_period
         self.arm_signal=arm_signal
-        self.output_off_mode=output_off_mode
-        self.output_auto_out_enable=output_auto_out_enable
-        self.output_auto_out_disable=output_auto_out_disable
 
-    def measure_resistance(self, nplc=10, kelvin_connection=True, compensation=False):
+        self.output_off_mode=output_off_mode
+        if output_auto_out_enable is not None:
+            self.output_auto_out_enable=output_auto_out_enable
+        if output_auto_out_disable is not None:
+            self.output_auto_out_disable=output_auto_out_disable
+
+    def measure_resistance(self, nplc=10, kelvin_connection=True, compensation=False, device_float='float'):
         """ Configures the measurement of resistance.
 
-        :param nplc: A :attr:`~AgilentB2961A.resistance_nplc` value.
+        :param nplc: A :attr:`~AgilentB2961A.device_nplc` value.
         :param kelvin_connection: A :attr:`~AgilentB2961A.resistance_connection` value.
         :param compensation: A :attr:`~AgilentB2961A.resistance_compensation` value.
         """
         log.info("%s is measuring resistance." % self.name)
         self.write(":SENS:FUNC RES;:SENS:RES:MODE MAN;:FORM:ELEM:SENS RES")
-        self.resistance_nplc=nplc
+        self.device_nplc=nplc
+        self.device_float=device_float
         if kelvin_connection:
             self.resistance_connection=1
         else:
@@ -593,29 +610,31 @@ class AgilentB2961A(Instrument):
             self.resistance_compensation=1
         else:
             self.resistance_compensation=0
-        self.check_errors()
+        self.check_errors
 
-    def measure_voltage(self, auto_range=True, nplc=10):
+    def measure_voltage(self, auto_range=True, nplc=10, device_float='float'):
         """ Configures the measurement of voltage.
 
-        :param nplc: A :attr:`~AgilentB2961A.voltage_nplc` value.
+        :param nplc: A :attr:`~AgilentB2961A.device_nplc` value.
         :param autorange: A :attr:`~AgilentB2961A.voltage_source_range_auto` value.
         """
         log.info("%s is measuring voltage." % self.name)
         self.write(":SENS:FUNC VOLT;:FORM:ELEM:SENS VOLT")
-        self.voltage_nplc = nplc
-        self.check_errors()
+        self.device_nplc = nplc
+        self.device_float=device_float
+        self.check_errors
 
-    def measure_current(self, auto_range=True, nplc=10):
+    def measure_current(self, auto_range=True, nplc=10, device_float='float'):
         """ Configures the measurement of current.
 
-        :param nplc: A :attr:`~AgilentB2961A.current_nplc` value.
+        :param nplc: A :attr:`~AgilentB2961A.device_nplc` value.
         :param auto_range: A :attr:`~AgilentB2961A.current_source_range_auto` value.
         """
         log.info("%s is measuring current." % self.name)
         self.write(":SENS:FUNC 'CURR';:FORM:ELEM CURR")
-        self.current_nplc = nplc
-        self.check_errors()
+        self.device_nplc = nplc
+        self.device_float=device_float
+        self.check_errors
 
     def source_auto_range(self):
         """ Configures the source to use automatic ranging by :attr:`~AgilentB2961A.current_source_range_auto` or :attr:`~AgilentB2961A.voltage_source_range_auto`. """
@@ -624,10 +643,10 @@ class AgilentB2961A(Instrument):
         else:
             self.voltage_source_range_auto=1
 
-    def apply_current(self, current, current_range=None, compliance_voltage=42):
+    def apply_current(self, current, current_range=None, compliance_voltage=42, device_float='float'):
         """ Configures the instrument to apply a souce current and uses and auto-range unless a current range is specified. The compliance voltage is also set.
 
-        :param current_source: A :attr:`~AgilentB2961A.current_source` value.
+        :param current_source_level: A :attr:`~AgilentB2961A.current_source_level` value.
         :param current_range: A :attr:`~AgilentB2961A.current_source_range` value. If None, then :attr:`~AgilentB2961A.current_source_range_auto` enables the auto-range.
         :param compliance_voltage: A :attr:`~.AgilentB2961A.voltage_compliance` value.
         """
@@ -637,14 +656,15 @@ class AgilentB2961A(Instrument):
             self.current_source_range_auto=1
         else:
             self.current_source_range = current_range
-        self.current_source = current
+        self.device_float = device_float
+        self.current_source_level = current
         self.voltage_compliance = compliance_voltage
-        self.check_errors()
+        self.check_errors
 
-    def apply_voltage(self, voltage, voltage_range=None, compliance_current=0.1):
+    def apply_voltage(self, voltage, voltage_range=None, compliance_current=0.1, device_float='float'):
         """ Configures the instrument to apply a souce voltage and uses and auto-range unless a voltage range is specified. The compliance current is also set.
 
-        :param voltage: A :attr:`~AgilentB2961A.voltage_source` value.
+        :param voltage: A :attr:`~AgilentB2961A.voltage_source_level` value.
         :param voltage_range: A :attr:`~AgilentB2961A.voltage_source_range` value. If None, then :attr:`~AgilentB2961A.voltage_source_range_auto` enables the auto-range.
         :param compliance_current: A :attr:`~.AgilentB2961A.current_compliance` value.
         """
@@ -654,9 +674,10 @@ class AgilentB2961A(Instrument):
             self.voltage_source_range_auto=1
         else:
             self.voltage_source_range = voltage_range
-        self.voltage_source = voltage
+        self.device_float = device_float
+        self.voltage_source_level = voltage
         self.current_compliance = compliance_current
-        self.check_errors()
+        self.check_errors
 
     def beep(self, frequency=2e9, duration=1):
         """ Sounds a system beep.
@@ -757,9 +778,9 @@ class AgilentB2961A(Instrument):
         """ Ensures the current/voltage output is set to zero and disabled. Sends an abort command to the device trigger. """
         log.info("Shutting down the connection to %s." % self.name)
         if self.source_mode == 'current':
-            self.current_source = 0.
+            self.current_source_level = 0.
         else:
-            self.voltage_source = 0.
-        if not trigger_is_idle[0]:
+            self.voltage_source_level = 0.
+        if not self.trigger_is_idle[0]:
             trigger_abort
-        self.disable_source()
+        self.disable_source
