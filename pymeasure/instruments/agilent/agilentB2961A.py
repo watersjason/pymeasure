@@ -782,5 +782,5 @@ class AgilentB2961A(Instrument):
         else:
             self.voltage_source_level = 0.
         if not self.trigger_is_idle[0]:
-            trigger_abort
+            self.trigger_abort
         self.disable_source
