@@ -49,11 +49,15 @@ class Agilent3458A(Instrument):
     # Device #
     ##########
 
-    identify = Instrument.measurement(
+    id = Instrument.measurement(
         "ID?",
         """ Returns the device ID. """
     )
-    lock_out = Instrument.command(
+    line_frequency = Instrument.measurement(
+        "LINE?",
+        """ Returns the AC line frequency. """
+    )
+    lock_out = Instrument.control(
         "LOCK?",
         "LOCK %g",
         """ An integer parameter that turns the front panel keyboard `on` or `off`. """,
@@ -61,7 +65,7 @@ class Agilent3458A(Instrument):
         values={'off':0,'on':1},
         map_values=True
     )
-    output_format = Instrument.command(
+    output_format = Instrument.control(
         "OFORMAT?",
         "OFORMAT %g",
         """ A string parameter that sets the multimeter output format. """,
@@ -71,12 +75,9 @@ class Agilent3458A(Instrument):
     )
     options_installed = Instrument.measurement(
         "OPT?",
-        """ A string parameter that returns the physically installed options. """,
-        validator=strict_discrete_set,
-        values={'none':0,'extended_memory':1},
-        map_values=True
+        """ A string parameter that returns the physically installed options. """
     )
-    preset_state = Instrument.measurement(
+    preset_state = Instrument.control(
         "PRESET?",
         "PRESET %g",
         """ A string parameter which puts the multimeter into an internally defined state. """,
@@ -84,7 +85,7 @@ class Agilent3458A(Instrument):
         values={'fast':0,'normal':1,'digital':2},
         map_values=True
     )
-    query_format = Instrument.command(
+    query_format = Instrument.control(
         "QFORMAT?",
         "QFORMAT %s",
         """ TODO """,
@@ -92,28 +93,41 @@ class Agilent3458A(Instrument):
         values={'number':'NUM','normal':'NORM','alpha':'ALPHA'},
         map_values=True
     )
-    #TODO RESET
-    device_revision = Instrument.measurement(
+    revision = Instrument.measurement(
         "REV?",
         """ A string property with the master and slave processor firmware revisions. """
     )
-    # TODO TEST
-    # TODO RQS Needs bit mapping feature
-    service_request = Instrument.setting(
-        "SRQ %g",
-        """ An integer parameter that sets the status register bit 2. If bit 2 is enabled to assert the GPIB service request, then it is also set. """,
-    ) # TODO service_request validator
-    status = Instrument.measurement(
+    status_set_condition = Instrument.setting(
+        "RQS %g",
+        """ Enable a status register condition. """,
+        validator=strict_discrete_set,
+        values=list(range(1,255,1)),
+        cast=int
+    )
+    status_get_condition = Instrument.measurement(
         "STB?",
-        """ An integer parameter that represents the bits returned from the status byte query. """
+        """ An integer parameter that represents the bits returned from the status byte query. """,
+        cast=int
     )
-    temperature = Instrument.measurement(
-        "TEMP?",
-        """ A parameter that represents the internally measured multimeter temperature in degrees Centigrade. """
-    )
-    terminals = Instrumnet.measurement(
+    terminals = Instrument.measurement(
         "TERM?",
-        """ A string parameter of `FRONT` or `REAR` that designates which terminals are selected. """
+        """ A string parameter of `FRONT` or `REAR` that designates which terminals are selected. """,
+        validator=strict_discrete_set,
+        values={'open':0,'front':1,'rear':2},
+        cast=int,
+        map_values=True
+    )
+    output_eoi = Instrument.control(
+        "END?",
+        "END %g",
+        """ A string parameter that enables or disables the GPIB End or Identify (EOI) function.
+
+        In ASCII format, each reading output to GPIB that is followed by the EOI (carriage return, line feed) indicates the transmission is done.
+
+        This command controls when the EOI is sent. """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1,'always':2},
+        map_values=True
     )
 
     ###############
@@ -125,8 +139,7 @@ class Agilent3458A(Instrument):
         """ The value sent with the CAL command must exactly equal the actual output value of the adjustment source. It is recommended that 10V be used for CAL 10 and 10K ohms be used for CAL 10E3.
 
         Any standard value between 1 V and 12 V or 1k ohms and 12k ohms can be used. A value less than 10 V or less than 10k ohms will introduce additional uncertainty to the multimeter's accuracy specifications. """
-    ) #TODO calibration_external validator, needs bit mapping feature
-    # TODO CAL?
+    )
     calibration_internal = Instrument.setting(
         "ACAL %g",
         """ A string property that instructs the multimeter to perform a specified type of internal self calibration. Calibration security must be removed by :meth:`~Agilent3458A.calibration_secure`. """,
@@ -139,7 +152,7 @@ class Agilent3458A(Instrument):
         """ An integer property indicating the number of times the multimeter has been calibrated. """,
         cast=int
     )
-    calibration_string = Instrument.command(
+    calibration_string = Instrument.control(
         "CALSTR?",
         "CALSTR %s",
         """ A string property that is stored in the multimeter's nonvolatile calibration RAM. Recommended usage is to store the meter's internal temperature at the time of calibration, the date of calibration, and the scheduled date for the next calibration. """
@@ -159,15 +172,7 @@ class Agilent3458A(Instrument):
     # Measurement #
     ###############
 
-    range_auto = Instrument.command(
-        "ARANGE?",
-        "ARANGE %g",
-        """ TODO """,
-        validator=strict_discrete_set,
-        values={'off':0,'on':1,'once':2},
-        map_values=True
-    )
-    auto_zero = Instrument.command(
+    auto_zero = Instrument.control(
         "AZERO?",
         "AZERO %g",
         """ TODO """,
@@ -175,7 +180,14 @@ class Agilent3458A(Instrument):
         values={'off':0,'on':1,'once':2},
         map_values=True
     )
-    fix_input_impedance = Instrument.command(
+    digits = Instrument.control(
+        "NDIG?",
+        "NDIG %g",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values=(list(range(3,9,1)))
+    )
+    fix_input_impedance = Instrument.control(
         "FIXEDZ?",
         "FIXEDZ %g",
         """ An integer parameter that turns the fixed input resistance function for DC voltage measurements `on` or `off`. When enabled, the multimeter maintains its input resistance at 10e6 ohms for all ranges. """,
@@ -187,25 +199,14 @@ class Agilent3458A(Instrument):
         "ISCALE?",
         """ Returns the scale factor for the internal conversion from the intger (`SINT`, `DINT`) formats to the real (`ASCII`, `SREAL`, `DREAL`) formats. Multiplying the integer values by this factor returns the actual values. """
     )
-    line_frequency = Instrument.measurement(
-        "LINE?",
-        """ Returns the AC line frequency. """
-    )
-    digits = Instrument.command(
-        "NDIG?",
-        "NDIG %g",
-        """ TODO """,
-        validator=strict_discrete_set,
-        values=(list(range(3,9,1)))
-    )
-    nplc = Instrument.command(
+    nplc = Instrument.control(
         "NPLC?",
         "NPLC %g",
         """ An integer parameter that sets the number of power line cycles over which the A/D converter integrates the input signal. """,
         validator=strict_discrete_set,
         values=(list(range(0,10,1)) + list(range(10,1001,10)))
     )
-    offset_compensation_state = Instrument.command(
+    offset_compensation = Instrument.control(
         "OCOMP?",
         "OCOMP %g",
         """ A string parameter that switches the state of the offset resistance compensation function. """,
@@ -213,8 +214,20 @@ class Agilent3458A(Instrument):
         values={'off':0,'on':1},
         map_values=True
     )
-    #TODO RANGE
-    measure_ratio_state = Instrument.command(
+    range_auto = Instrument.control(
+        "ARANGE?",
+        "ARANGE %g",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1,'once':2},
+        map_values=True
+    )
+    range = Instrument.control(
+        "RANGE?",
+        "RANGE %g",
+        """ TODO """,
+    )
+    voltage_dc_ratio = Instrument.control(
         "RATIO?",
         "RATIO %g",
         """ A string parameter that instructs the multimeter to measure a DC reference voltage applied to the Sense terminals and a signal voltage applied to the Input terminals. The ratio is calculated as input_resistance / sense_resistance. """,
@@ -222,7 +235,7 @@ class Agilent3458A(Instrument):
         values={'off':0,'on':1},
         map_values=True
     )
-    ac_voltage_mode = Instrument.command(
+    voltage_ac_mode = Instrument.control(
         "SETACV?",
         "SETACV %g",
         """ A string parameter for the AC/AC+DC voltage conversion method. """,
@@ -230,77 +243,68 @@ class Agilent3458A(Instrument):
         values={"analog":0,"rand_sampling":1,"sync_sampling":2},
         map_values=True
     )
-    # TODO tone
-
-
-    ###############
-    # Subsampling #
-    ###############
-
-    # TODO subsampling commands
-    # TODO SSAC
-    # TODO SSDC
-    # TODO SSPARM?
-    # TODO SSRC
-    # TODO SSTATE
-    # TODO SUB
-    # TODO SUBEND
 
     ########
     # MATH #
     ########
 
-    # TODO NULL
-    # TODO STAT
-    math_recall = Instrument.setting(
+    math_recall = Instrument.measurement(
         "RMATH %g",
-        """ A string parameter that recalls and returns the math register contents. """,
+        """ Reads the meter memory and returns the value of the requested math operation. """,
         validator=strict_discrete_set,
-        values={'degree':1,'lower_bound':2,'max_pfail':3,'mean':4,'min_pfail':5,'number_sample':6,'null_offset':7,'perc':8,'reference_value':9,'reference_impedance':10,'scale_divisor':11,'standard_deviation':12,'upper_bound':13,'number_pfail':15},
+        values={'degree':1,'lower':2,'max':3,'mean':4,'min':5,'nsamp':6,'offset':7,'perc':8,'ref':9,'res':10,'scale':11,'sdev':12,'upper':13,'pfailnum':15},
         map_values=True
     )
-    # TODO SMATH
 
     #########
     # Error #
     #########
 
-    #TODO EMASK
-    #TODO ERR?
-    #TODO ERRSTR?
+    error_mask = Instrument.setting(
+        "EMASK %g",
+        """ An integer property that creates a user specified error condition. """
+    ) # TODO validator with bit array
+    error_query = Instrument.setting(
+        "ERR?",
+        """ An integer property that represents the sum of all device errors. """
+    )
 
     ##############
     # Triggering #
     ##############
 
-    trigger_delay = Instrument.command(
+    trigger_delay = Instrument.control(
         "DELAY?",
         "DELAY %g",
         """ TODO """,
         validator=joined_validators(strict_discrete_set,truncated_range),
         values=[[-1,0],[1e-7,6000]]
     )
-    trigger_num_readings = Instrument.command(
+    trigger_n_readings = Instrument.control(
         "NRDGS?",
         "NRDGS %g",
         """ TODO """,
-        validator=strict_discrete_set,
-        values={'auto':1,'external':2,'sync':5,'timer':6,'level':7,'line':8},
-        map_values=True
+        validator=truncated_range,
+        values=(1,16777215),
+        cast=int
     )
-    # TODO SWEEP
-    # TODO TARM
-    trigger_buffer_state = Instrument.command(
+    trigger_buffer_state = Instrument.control(
         "TBUFF?",
         "TBUFF %g",
-        """ A boolean parameter to enable or disable the trigger buffer. When enabled, the trigger is buffered to avoid the error: `TRIGGER TOO FAST`. """,
-        validator=strict_discrete_set
-        values=[False,True],
-        map_values={False:0,True:1},
-        cast=bool
+        """ A string parameter to enable or disable the trigger buffer. When enabled, the trigger is buffered to avoid the error: `TRIGGER TOO FAST`. """,
+        validator=strict_discrete_set,
+        values={'off':0,'on':1},
+        map_values=True
     )
-    # TODO TIMER
-    trigger = Instrument.command(
+    trigger_period = Instrument.control(
+        "TIMER?",
+        "TIMER %g",
+        """ An integer property that defines the time interval between readings. """,
+        validator=truncated_range,
+        values=[2e-5,6000],
+        cast=int
+    )
+    trigger_event = Instrument.control(
         "TRIG?",
         "TRIG %g",
         """ A string parameter that specifies the trigger control event. """,
@@ -321,16 +325,17 @@ class Agilent3458A(Instrument):
         values={'off':0,'on':1},
         map_values=True
     )
-    buffer_count = Instrument.measurement(
+    memory_count = Instrument.measurement(
         "MCOUNT?",
-        """ Returns the total number of stored readings. """
+        """ Returns the total number of stored readings. """,
+        cast=int
     )
     memory_state = Instrument.control(
         "MEM?",
         "MEM %g",
         """ Enables or disables reading memory and designates the storage mode. """,
         validator=strict_discrete_set,
-        values={'off':0,'lifo':1,'fifo':2,'cont':3},
+        values={'off':0,'lifo':1,'fifo':2,'continue':3},
         map_values=True
     )
     memory_format = Instrument.control(
@@ -338,26 +343,101 @@ class Agilent3458A(Instrument):
         "MFORMAT %g",
         """ TODO """,
         validator=strict_discrete_set,
-        values={'ascii':1,'sint':2,'dint':3,'sreal':4,'dreal:5'},
+        values={'ascii':1,'sint':2,'dint':3,'sreal':4,'dreal':5},
         map_values=True
     )
-    # TODO RMEM
-
-    #
-    #
-    #
 
     def __init__(self, adapter, **kwargs):
-        super(AgilentB2961A, self).__init__(adapter,
+        super(Agilent3458A, self).__init__(adapter,
         "Agilent 3458A Source-Measurement Unit", includeSCPI=False, **kwargs
         )
 
         self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
 
+        self.write("END ALWAYS")
+
+    @property
+    def reset(self):
+        """ TODO """
+        self.write('RESET')
+
+    @property
+    def tone(self):
+        """ Causes the multimeter to beep once. """
+        self.write('TONE')
+
+    @property
+    def device_test(self):
+        """ Perform a series of internal self tests. If a hardware error is detected, the bit 0 in the error register is set by the meter and an error description is set in the auxiliary error register. """
+        self.write('TEST')
+
+    @property
+    def service_request(self):
+        """ An integer parameter that sets the status register bit 2. If bit 2 is enabled to assert the GPIB service request, then it is also set. """
+        self.write("SRQ")
+
+    def cal_query(self, constant_id, cal_item):
+        """ TODO """
+        self.values('CAL? %i,%i' % (constant_id, cal_item))
+
+    @property
+    def math_off(self):
+        """ Turns off the math functions. """
+        self.write('MATH OFF')
+
+    @property
+    def math_null(self):
+        """ Uses the present value as the null offset value and calculates new output value. """
+        self.write('MATH NULL')
+
+    @property
+    def math_stat(self):
+        """ TODO """
+        if self.values("MATH?") == [9,0]:
+            self.write("MATH CONT,STAT")
+        else:
+            self.write("MATH STAT")
+
+    def trigger(self, trigger_event=None, n_trigger_events=None):
+        """ TODO """
+        events = {'auto':1, 'external':2, 'single':3, 'hold':4, 'syn':5}
+
+        if trigger_event is None and n_trigger_events is None:
+            return(self.ask('NRDGS?').strip())
+        elif n_trigger_events is none:
+            self.write('NRDGS 1, %g' % events[trigger_event])
+        else:
+            self.write('NRDGS %g, %g' % (events[trigger_event], n_arm_events))
+
+    def trigger_arm(self, arm_event=None, n_arm_events=None):
+        """ A string parameter that sets the arm level trigger event. The optional integer parameter `n_arm_events` sets the number of arm events passed to the device. """
+        events = {'auto':1, 'external':2, 'single':3, 'hold':4, 'syn':5}
+
+        if arm_event is None and n_arm_events is None:
+            return(self.ask('TARM?').strip())
+        elif n_arm_events is None:
+            self.write('TARM %i' % events[arm_event])
+        else:
+            self.write('TARM %i, %i' % (events[arm_event], n_arm_events))
+
+    def read_memory_record(self, n_readings=1, start_position=1, record_number=1):
+        """ Returns the reading (or group of readings) stored on a record in the device memory.
+
+        """
+        eoi = self.output_eoi
+        self.output_eoi = 'on'
+
+        val = self.values('RMEM %g, %g, %g' % (start_position, n_readings, record_number))
+
+        self.memory_state = 'continue'
+        self.output_eoi = eoi
+
+        return(val)
+
     @property
     def error(self):
         """ Reads and removes the top item in the error queue and returns a tuple of an error code and message from the single error. """
-        err = self.values(":SYST:ERR?")
+        err = self.values("ERRSTR?")
         if len(err) < 2:
             err = self.read() # Try reading again
         code = err[0]
@@ -370,7 +450,7 @@ class Agilent3458A(Instrument):
         code, message = self.error
         while code != 0:
             t = time.time()
-            log.info("Agilent B2961a reported error: %d, %s" % (code, message))
+            log.info("Agilent 3458a reported error: %d, %s" % (code, message))
             code, message = self.error
             if (time.time()-t)>10:
-                log.warning("Timed out for Agilent B2961a error retrieval.")
+                log.warning("Timed out for Agilent 3458a error retrieval.")
