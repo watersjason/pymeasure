@@ -23,4 +23,5 @@
 #
 
 from .mettler_toledo_sics import MettlerToledoSICS
-from .mettler_toledo_at import MettlerToledoAT20
+from .mettler_toledo_bdi import MettlerToledoBDI
+from .mettler_toledo_at_mt_umt import MettlerToledoAT20
