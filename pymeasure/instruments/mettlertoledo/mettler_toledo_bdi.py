@@ -38,21 +38,21 @@ class MettlerToledoBDI(Instrument):
         used by most modern Mettler Toledo balances.
     """
     door_auto_mode=Instrument.control(
-        "AD?",
+        "AD ?",
         "AD %i",
         """ A string parameter that enables or disables
             the automatic draft shield operation.
         """,
-        validators=strict_discrete_set,
-        values={"on":1,
-                "off":0},
+        validator=strict_discrete_set,
+        values={"on":"1",
+                "off":"0"},
         map_values=True,
         get_process=lambda v:v.split("=")[-1]
     )
     weight_offset_value=Instrument.setting(
         "B %f",
         "A float value subtracted from all future weighing results.",
-        validators=truncated_range,
+        validator=truncated_range,
         values=[0,20]
     )
     calibration_mode=Instrument.control(
@@ -63,9 +63,9 @@ class MettlerToledoBDI(Instrument):
             sets the calibration mode to an external user
             calibration, or starts an internal calibration.
         """,
-        validators=strict_discrete_set,
-        values={"auto off":0,
-                "auto on":1,
+        validator=strict_discrete_set,
+        values={"auto off":"0",
+                "auto on":"1",
                 "external":"U",
                 "internal":"T"},
         map_values=True,
@@ -76,7 +76,6 @@ class MettlerToledoBDI(Instrument):
         """ A string parameter representing the
             current calibration status.
         """,
-        validators=strict_discrete_set,
         values={"idle":"CA=I",
                 "waiting":"CA=W",
                 "auto calibrate":"CA=CA",
@@ -90,28 +89,28 @@ class MettlerToledoBDI(Instrument):
         """ An integer parameter that allows access
             to reset the default configuration.
         """,
-        validators=strict_discrete_set,
+        validator=strict_discrete_set,
         values=(0,1),
-        get_process=lambda v:v.split("=")[-1]
+        get_process=lambda v:int(v.split("=")[-1])
     )
     display_text=Instrument.setting(
         "D %s",
         "Display a message on the balance panel."
     )
     generate_sound=Instrument.setting(
-        "DB %s",
+        "%s",
         """ A string parameter that causes
             the device to generate sound.""",
-        validators=strict_discrete_set,
-        values={"suppress":"0",
-                "short":"",
-                "long":"1",
-                "double":"2",
-                "mixed":"3",
-                "termination":"C",
-                "error":"E"},
+        validator=strict_discrete_set,
+        values={"suppress":"DB 0",
+                "short":"DB",
+                "long":"DB 1",
+                "double":"DB 2",
+                "mixed":"DB 3",
+                "termination":"DB C",
+                "error":"DB E"},
         map_values=True
-    ) # TODO: physical test
+    ) # TODO: physical test times out
     display_status=Instrument.control(
         "DST ?",
         "DST %s",
@@ -119,22 +118,22 @@ class MettlerToledoBDI(Instrument):
             vibration adapter, weighing process adapter,
             and the device interface.
         """,
-        validators=strict_discrete_set,
-        values={"clear":0,
-                "keep":1,
+        validator=strict_discrete_set,
+        values={"clear":"0",
+                "keep":"1",
                 "temporary":"A"},
         map_values=True,
         get_process=lambda v:v.split("=")[-1]
     )
-    dispaly_state=Instrument.setting(
+    display_state=Instrument.setting(
         "DSX %s",
         """ A string parameter that selects active
             display if an auxiliary display is attached.
         """,
-        validators=strict_discrete_set,
-        values={"both":0,
-                "main":1,
-                "auxiliary":2},
+        validator=strict_discrete_set,
+        values={"both":"0",
+                "main":"1",
+                "auxiliary":"2"},
         map_values=True
     )
     command_acknowedge=Instrument.control(
@@ -143,9 +142,9 @@ class MettlerToledoBDI(Instrument):
         """ An integer parameter enabling/disabling
             the command acknowledge mode.
         """,
-        validators=strict_discrete_set,
+        validator=strict_discrete_set,
         values=(0,1),
-        get_process=lambda v:v.split("=")[-1]
+        get_process=lambda v:int(v.split("=")[-1])
     )
     end_of_line=Instrument.control(
         "EOL ?",
@@ -153,14 +152,14 @@ class MettlerToledoBDI(Instrument):
         """ A string parameter indicating the
             end-of-line mode: `CR` or `CRLF`.
         """,
-        validators=strict_discrete_set,
+        validator=strict_discrete_set,
         values=("CR",
                 "CRLF"),
         get_process=lambda v:v.split("=")[-1]
     )
     handshake_mode=Instrument.control(
         "HS ?",
-        "HS %s",
+        "%s",
         """ A string parameter indicating the handshake mode:
             `hard` (DTR/CTS),
             `soft` (XON/XOFF),
@@ -168,35 +167,21 @@ class MettlerToledoBDI(Instrument):
             `cl` (Mettler Toledo CL mode), or
             `off`.
         """,
-        validators=strict_discrete_set,
-        values={"hard":"hard",
-                "soft":"soft",
-                "pause":"PAUSE",
-                "cl":"CL",
-                "off":"off",
-                "factory default":""},
+        validator=strict_discrete_set,
+        values={"hard":"HS hard",
+                "soft":"HS soft",
+                "pause":"HS PAUSE",
+                "cl":"HS CL",
+                "off":"HS off",
+                "factory default":"HS"},
         map_values=True,
-        get_process=lambda v:v.split("=")[-1]
+        get_process=lambda v:"HS "(+v.split("=")[-1])
     )
     id=Instrument.measurement(
         "ID",
         "Transmit the device identification text."
-    )
-    id_extended=Instrument.command(
-        "IDX",
-        "ID %s",
-        """ A string parameter with the
-            user-definable identification string.
-        """
-    )
-    mode_reset=Instrument.setting(
-        "M",
-        """ Returns the vibration adapter, weighing process
-            adapter, stability indicator, AutoZero and the
-            readout increment to the factory setting.
-        """
-    )
-    mode_vibration_adapter=Instrument.command(
+    ) # TODO this needs to be read additional times to get all data
+    mode_vibration_adapter=Instrument.control(
         "MI ?",
         "MI %s",
         """ A string parameter for the vibration adapter.
@@ -206,13 +191,14 @@ class MettlerToledoBDI(Instrument):
             `normal`, or
             `unstable`.
         """,
-        validators=strict_discrete_set,
-        values=("stable",
-                "normal",
-                "unstable"),
+        validator=strict_discrete_set,
+        values={"stable":"1",
+                "normal":"2",
+                "unstable":"3"},
+        map_values=True,
         get_process=lambda v:v.split("=")[-1]
     )
-    mode_process_adapter=Instrument.command(
+    mode_process_adapter=Instrument.control(
         "ML ?",
         "ML %g",
         """ A string parameter for the weighing process adapter.
@@ -222,15 +208,15 @@ class MettlerToledoBDI(Instrument):
             `universal`, or
             `absolute`.
         """,
-        validators=strict_discrete_set,
-        values={"none":0,
-                "dispensing":1,
-                "universal":2,
-                "absolute":3},
+        validator=strict_discrete_set,
+        values={"none":"0",
+                "dispensing":"1",
+                "universal":"2",
+                "absolute":"3"},
         map_values=True,
         get_process=lambda v:v.split("=")[-1]
     )
-    mode_stability_detection=Instrument.command(
+    mode_stability_detection=Instrument.control(
         "MS ?",
         "MS %g",
         """ An integer parameter that selects the relative
@@ -239,14 +225,14 @@ class MettlerToledoBDI(Instrument):
             Values range from 0 (off) to 7 (highest stability).
             The device factory default setting is 3.
         """,
-        validators=truncated_range,
+        validator=truncated_range,
         values=[0,7],
-        get_process=lambda v:v.split("=")[-1],
+        get_process=lambda v:int(v.split("=")[-1]),
         cast=int
     )
-    mode_data_transmission=Instrument.command(
+    mode_data_transmission=Instrument.control(
         "MT ?",
-        "MT %s",
+        "%s",
         """ A string parameter that modifies the data
             transmission mode. String values are:
             `stable`    - send only stable readings,
@@ -255,40 +241,41 @@ class MettlerToledoBDI(Instrument):
             `continuous`- continuously send readings,
             `factory`   - return to factory default.
         """,
-        validators=strict_discrete_set,
-        values={"stable":"Stb",
-                "all":"All",
-                "auto":"Auto",
-                "continuous":"Cont",
-                "factory":""},
-        get_process=lambda v:v.split("=")[-1]
-    ) #TODO phsyical test
-    mode_autozero=Instrument.command(
+        validator=strict_discrete_set,
+        values={"stable":"MT Stb",
+                "all":"MT All",
+                "auto":"MT Auto",
+                "continuous":"MT Cont",
+                "factory":"MT"},
+        map_values=True,
+        get_process=lambda v:"MT"+(v.split("=")[-1])
+    )
+    mode_autozero=Instrument.control(
         "MZ ?",
         "MZ %g",
         """ A string parameter that turns the
             autozero function `on` or `off`.
         """,
-        validators=strict_discrete_set,
-        values={"off":0,
-                "on":1},
+        validator=strict_discrete_set,
+        values={"off":"0",
+                "on":"1"},
         map_values=True,
         get_process=lambda v:v.split("=")[-1]
     )
-    range_select=Instrument.command(
+    range_select=Instrument.control(
         "RG ?",
-        "RG %s",
+        "%s",
         "A string parameter for the weighing range.",
-        validators=strict_discrete_set,
-        values={"coarse":"C",
-                "fine":"F",
-                "toggle":""},
+        validator=strict_discrete_set,
+        values={"coarse":"RG C",
+                "fine":"RG F",
+                "toggle":"RG"},
         map_values=True,
-        get_process=lambda v:v.split("=")[-1]
-    ) # TODO physical test, might require a set_process to strip whitespace
-    key_restrict=Instrument.command(
+        get_process=lambda v:"RG "+(v.split("=")[-1])
+    )
+    key_restrict=Instrument.control(
         "RK ?",
-        "RK %s"
+        "RK %s",
         """ A string parameter that enables or disables
             the device keys. The door keys are not included
             in the keys controlled.
@@ -299,7 +286,7 @@ class MettlerToledoBDI(Instrument):
         map_values=True,
         get_process=lambda v:v.split("=")[-1]
     )
-    door_state=Instrument.command(
+    door_state=Instrument.control(
         "WI ?",
         "WI %s",
         """ A string parameter that controls
@@ -355,10 +342,10 @@ class MettlerToledoBDI(Instrument):
     @property
     def abort(self):
         """ Aborts command execution. """
-        _reply=self.query(".")
+        _reply=self.ask(".")
         if _reply is "EL":
             raise VisaIOError("No command in progress capable of aborting.")
-    def send_stable=(self,full_output=False):
+    def send_stable(self,full_output=False):
         """ Cancel any existing commands and send the next stable
             weighing result.
 
@@ -366,17 +353,17 @@ class MettlerToledoBDI(Instrument):
                                 of the device full output string. When `False`,
                                 the numeric weighing value is returned.
         """
-            _data_str=self.query("S")
-            if _data_str is "S":
-                raise VisaIOError("Value not read from device.")
-            if full_output:
-                return(_data_str)
-            else:
-                try:
-                    return(float(_data_str.split()[1]))
-                except:
-                    raise ValueError("Value could not be converted to float.")
-    def send_immediate=(self,full_output=False):
+        _data_str=self.ask("S")
+        if _data_str is "S":
+            raise VisaIOError("Value not read from device.")
+        if full_output:
+            return(_data_str)
+        else:
+            try:
+                return(float(_data_str.split()[1]))
+            except:
+                raise ValueError("Value could not be converted to float.")
+    def send_immediate(self,full_output=False):
         """ Cancel any existing commands and send the weighing
             result immediately.
 
@@ -384,7 +371,7 @@ class MettlerToledoBDI(Instrument):
                                 of the device full output string. When `False`,
                                 the numeric weighing value is returned.
         """
-        _data_str=self.query("SI")
+        _data_str=self.ask("SI")
         if _data_str is "SI":
             raise VisaIOError("Value could not be read from device.")
         if full_output:
@@ -394,7 +381,7 @@ class MettlerToledoBDI(Instrument):
                 return(float(_data_str.split()[1]))
             except:
                 raise ValueError("Value could not be converted to float.")
-    def send_immediate_repeat=(self,full_output=False):
+    def send_immediate_repeat(self,full_output=False):
         """ Cancel any existing commands and then
             repeatedly and send the immediate
             weighing results.
@@ -442,17 +429,25 @@ class MettlerToledoBDI(Instrument):
                 self.write("SR {}".format(threshold))
             _data_str=self.read()
             pass # TODO
+    @property
     def tare(self):
         """ Tares the balance or switches it on again after a
             power failure. `timeout` is temporarily set to 60 s.
             Raises `VisaIOError` if device tare is not successful.
         """
-        _tmo=self.connection.timeout
-        self.connection.timeout=60.0
-
-        _data_str=self.query("T")
-
-        self.connection.timeout=_tmo
-
-        if _data_str is "EL":
-            raise VisaIOError("Error detected during attempt to tare device.")
+        self.write("T")
+    @property
+    def clear(self):
+        """ Clear the resource IO. """
+        self.adapter.connection.clear()
+    @property
+    def display_clear(self):
+        """ Clear displayed message from the balance panel. """
+        self.write("D")
+    @property
+    def mode_reset(self):
+        """ Returns the vibration adapter, weighing process
+            adapter, stability indicator, AutoZero and the
+            readout increment to the factory setting.
+        """
+        self.write("M")
