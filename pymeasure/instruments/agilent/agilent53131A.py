@@ -27,7 +27,9 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument
-from pymeasure.instruments.validators import truncated_range, strict_discrete_set, truncated_discrete_set
+from pymeasure.instruments.validators import (truncated_range,
+                                              strict_discrete_set,
+                                              truncated_discrete_set)
 
 class Agilent53131A(Instrument):
     """
@@ -37,9 +39,11 @@ class Agilent53131A(Instrument):
 
     .. code-block:: python
 
-        counter = Agilent53131A("GPIB::1::INSTR")   # Esablish the Agilent 53131A counter device
+        # Esablish the Agilent 53131A counter device
+        counter = Agilent53131A("GPIB::1::INSTR")
 
-        counter.device_calibrate                    # Run the self calibtration
+        # Run the self calibtration
+        counter.device_calibrate
 
         TODO
 
@@ -76,7 +80,7 @@ class Agilent53131A(Instrument):
         ':SENS:EVENT2:FEED %s',
         """ TODO """,
         validator=strict_discrete_set,
-        values={'common':'"INP"', 'independent':'"INP2"'},
+        values={'common':'"INP"','independent':'"INP2"'},
         map_values=True
     )
 
@@ -321,15 +325,16 @@ class Agilent53131A(Instrument):
     time_interval_arm_start_slope = Instrument.control(
         ':SENS:TINT:ARM:START:SLOPE?',
         ':SENS:TINT:ARM:START:SLOPE %s',
-        """ A string parameter that represents the polarity of the ARM slope. """,
+        """ A string parameter that represents
+            the polarity of the ARM slope. """,
         validator=strict_discrete_set,
         values={'positive':'POS', 'negative':'NEG'},
         map_values=True
     )
 
     def __init__(self, adapter, **kwargs):
-        super(Agilent53131A, self).__init__(adapter, "Agilent 53131A Universal Counter", **kwargs
-        )
+        super(Agilent53131A, self).__init__(adapter,
+              "Agilent 53131A Universal Counter", **kwargs)
 
         self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
 
@@ -338,7 +343,15 @@ class Agilent53131A(Instrument):
             """ TODO """
             self.write(':INIT')
 
-    def time_interval_config(self, channel_1_trigger_level, channel_2_trigger_level, channel_1_slope='positive', channel_2_slope='negative', channel_mode='common', impedance=1e6, couple='DC', measure_continuous=True):
+    def time_interval_config(self,
+                             channel_1_trigger_level,
+                             channel_2_trigger_level,
+                             channel_1_slope='positive',
+                             channel_2_slope='negative',
+                             channel_mode='common',
+                             impedance=1e6,
+                             couple='DC',
+                             measure_continuous=True):
         """ TODO """
         self.measure_continuous=measure_continuous
         self.measure_function='time_interval'
