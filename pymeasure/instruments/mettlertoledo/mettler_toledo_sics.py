@@ -37,10 +37,7 @@ class MettlerToledoSICS(Instrument):
         The SICS protocol is used by most modern
         Mettler Toledo balances.
     """
-    # MT-SICS level 0 states
-    device_commands=Instrument.measurement(
-        "I0",
-        "A string parameter of the supported SICS commands.")
+    # Select MT-SICS level 0 states
     device_version=Instrument.measurement(
         "I1",
         "A string parameter with the SICS level and version.")
@@ -52,19 +49,12 @@ class MettlerToledoSICS(Instrument):
         "A string parameter of the software version and type.")
     device_serial=Instrument.measurement(
         "I4",
-        "A string parameter with the device serial number.")
+        "A string parameter with the device serial number.",
+        get_process=lambda v:v.split(' ')[-1])
     device_software_id=Instrument.measurement(
         "I5",
-        "A string parameter with the Get software identification number.")
-    measure_stable=Instrument.measurement(
-        "S",
-        "Measure & send weight when stable.")
-    measure_immediate=Instrument.measurement(
-        "SI",
-        "Measure & send weight immediately.")
-    measure_repeatidly=Instrument.measurement(
-        "SIR",
-        "Repeatedly measure & immediately send weight.")
+        "A string parameter with the software identification number.",
+        get_process=lambda v:v.split(' ')[-1])
     zero=Instrument.measurement(
         "Z",
         "Zero the balance when stable.")
@@ -81,3 +71,44 @@ class MettlerToledoSICS(Instrument):
         "Generic Mettler Toledo SICS Balance",
         includeSCPI=False,
         **kwargs)
+    @property
+    def send_stable(self,full_output=False):
+        """ Cancel any existing commands and send the next stable
+            weighing result.
+
+            :param full_output: A boolean parameter that enables output
+                                of the device full output string. When `False`,
+                                the numeric weighing value is returned.
+        """
+        _data_str=self.ask("S")
+        if _data_str is "S":
+            raise VisaIOError("Value not read from device.")
+        if full_output:
+            return(_data_str)
+        else:
+            try:
+                return(float(_data_str.split()[1]))
+            except:
+                raise ValueError("Value could not be converted to float.")
+    @property
+    def send_immediate(self,full_output=False):
+    """ Cancel any existing commands and send the weighing
+        result immediately.
+
+        :param full_output: A boolean parameter that enables output
+                            of the device full output string. When `False`,
+                            the numeric weighing value is returned.
+    """
+    _data_str=self.ask("SI")
+    if _data_str is "SI":
+        raise VisaIOError("Value could not be read from device.")
+    if full_output:
+        return(_data_str)
+    else:
+        try:
+            return(float(_data_str.split()[1]))
+        except:
+            raise ValueError("Value could not be converted to float.")
+    measure_repeatidly=Instrument.measurement(
+        "SIR",
+        "Repeatedly measure & immediately send weight.")
