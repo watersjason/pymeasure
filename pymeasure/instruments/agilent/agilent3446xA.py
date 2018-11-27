@@ -49,7 +49,7 @@ class Agilent3446xA(Instrument):
     """
 
     # Non-Subsystem Commands
-    output_trigger_slope = Instrument.control(
+    slope_output_trigger = Instrument.control(
         ":OUTP:TRIG:SLOP?",
         ":OUTP:TRIG:SLOP %s",
         """ A string property for the polarity of the slope
@@ -86,29 +86,31 @@ class Agilent3446xA(Instrument):
     # CALCulate Subsystem Commands
     calc_limit_upper = Instrument.control(
         "CALC:LIM:UPP?",
-        "CALC:LIM:UPP %s",
+        "CALC:LIM:UPP %g",
         """ Sets an upper limit for calculation data. """,
         validator=truncated_range,
-        values=(-1e15,1e15,'MIN','MAX','DEF')
+        values=(-1e15,1e15)
     )
     calc_limit_lower = Instrument.control(
         "CALC:LIM:LOW?",
-        "CALC:LIM:LOW %s",
+        "CALC:LIM:LOW %g",
         """ Sets an lower limit for calculation data. """,
         validator=truncated_range,
-        values=(-1e15,1e15,'MIN','MAX','DEF')
+        values=(-1e15,1e15)
     )
     calc_limit_state = Instrument.control(
         "CALC:LIM:STAT?",
         "CALC:LIM:STAT %i",
-        """ A parameter that enables/disables the limit testing. """,
+        """ An integer parameter to enable the limit testing. """,
         validator=strict_discrete_set,
-        values=(0,'OFF',1,'ON')
+        values=(0,1),
+        cast=int
     )
     calc_hist_count = Instrument.measurement(
         "CALC:TRAN:HIST:COUNT?",
         """ Returns the number of measurements collected since
-            the histogram was last cleared. """
+            the histogram was last cleared. """,
+        cast=int
     )
     calc_hist_bins = Instrument.control(
         "CALC:TRAN:HIST:POIN?",
@@ -117,77 +119,85 @@ class Agilent3446xA(Instrument):
             upper range values for the histogram. Two additional bins are
             added: once for measurements below the lower range and a second
             for measurements above the upper range.""",
-        validator=strict_discrete_set,
-        values=(10,20,40,100,200,400,'MIN','MAX','DEF')
+        validator=truncated_discrete_set,
+        values=(10,20,40,100,200,400),
+        cast=int
     )
     calc_hist_range_auto = Instrument.control(
         "CALC:TRAN:HIST:RANG:AUTO?",
-        "CALC:TRAN:HIST:RANG:AUTO %s",
-        """ A parameter that enables/disables automatic selection of the
-            histogram lower and upper range values. """,
+        "CALC:TRAN:HIST:RANG:AUTO %i",
+        """ An integer parameter to enable automatic
+            selection of the histogram lower and
+            upper range values. """,
         validator=strict_discrete_set,
-        values=(0,'OFF',1,'ON')
+        values=(0,1),
+        cast=int
     )
     calc_hist_range_upper = Instrument.control(
         "CALC:TRAN:HIST:RANG:UPP?",
-        "CALC:TRAN:HIST:RANG:UPP %s",
-        """ Sets an upper limit for histogram range. """,
+        "CALC:TRAN:HIST:RANG:UPP %g",
+        """ A float parameter for the upper
+            limit of the histogram range. """,
         validator=truncated_range,
-        values=(-1e15,1e15,'MIN','MAX','DEF')
+        values=(-1e15,1e15)
     )
     calc_hist_range_lower = Instrument.control(
         "CALC:TRAN:HIST:RANG:LOW?",
-        "CALC:TRAN:HIST:RANG:LOW %s",
-        """ Sets an lower limit for histogram range. """,
+        "CALC:TRAN:HIST:RANG:LOW %g",
+        """ A float parameter for the lower
+            limit of the histogram range. """,
         validator=truncated_range,
-        values=(-1e15,1e15,'MIN','MAX','DEF')
+        values=(-1e15,1e15)
     )
     calc_hist_state = Instrument.control(
         "CALC:TRAN:HIST:STAT?",
-        "CALC:TRAN:HIST:STAT %s",
-        """ A parameter that enables/disables the histogram. """,
+        "CALC:TRAN:HIST:STAT %i",
+        """ An integer parameter to enable the histogram. """,
         validator=strict_discrete_set,
-        values=(0,'OFF',1,'ON')
+        values=(0,1),
+        cast=int
     )
     calc_stats_state = Instrument.control(
         "CALC:AVER:STAT?",
-        "CALC:AVER:STAT %s",
-        """ A parameter that enables/disables statistical computations. """,
+        "CALC:AVER:STAT %i",
+        """ An integer parameter to enable
+            statistical computations. """,
         validator=strict_discrete_set,
-        values=(0,'OFF',1,'ON')
+        values=(0,1),
+        cast=int
     )
     calc_stats_average = Instrument.measurement(
         "CALC:AVER:AVER?",
-        """ A parameter that returns the arithmetic mean. """,
+        """ A float parameter of the arithmetic mean. """,
         cast=float
     )
     calc_stats_count = Instrument.measurement(
         "CALC:AVER:COUNT?",
-        """ A parameter that returns the number of
+        """ A flaot parameter of the number of
             values used in statisical computations. """,
         cast=float
     )
     calc_stats_max = Instrument.measurement(
         "CALC:AVER:MAX?",
-        """ A parameter that returns the maximum value
+        """ A float parameter of the maximum value
             used in statistical computations. """,
         cast=float
     )
     calc_stats_min = Instrument.measurement(
         "CALC:AVER:MIN?",
-        """ A parameter that returns the minimum value
+        """ A float parameter of the minimum value
             used in statistical computations. """,
         cast=float
     )
     calc_stats_peak2peak = Instrument.measurement(
         "CALC:AVER:PTP?",
-        """ A parameter that returns the peak to peak range
+        """ A float parameter of the peak to peak range
             of the values used in statistical computations. """,
         cast=float
     )
     calc_stats_sdev = Instrument.measurement(
         "CALC:AVER:SDEV?",
-        """ A parameter that returns the standard deviation
+        """ A float parameter of the standard deviation
             of the values used in statistical computations. """,
         cast=float
     )
@@ -197,23 +207,28 @@ class Agilent3446xA(Instrument):
         """ A string parameter that controls
             the boxcar filter smoothing rate. """,
         validator=strict_discrete_set,
-        values=("SLOW","MED","MEDIUM","FAST")
+        values={'slow':     'SLOW',
+                'medium':   'MED',
+                'fast':     'FAST'},
+        map_values=True
     )
     calc_smoothing_state = Instrument.control(
         "CALC:SMO:STAT?",
-        "CALC:SMO:STAT %s",
-        """ A parameter that enables/disables the smoothing filter. """,
+        "CALC:SMO:STAT %i",
+        """ An integer parameter to enable the smoothing filter. """,
         validator=strict_discrete_set,
-        values=(0,'OFF',1,'ON')
+        values=(0,1),
+        cast=int
     )
     calc_trend_chart_state = Instrument.control(
         "CALC:TCH:STAT?",
-        "CALC:TCH:STAT %s",
-        """ A parameter that enables/disables the trend chart
+        "CALC:TCH:STAT %i",
+        """ An interger parameter to enable the trend chart
             when the unit is controlled remotely. Must be
             enabled before initiating the measurement sequence. """,
         validator=strict_discrete_set,
-        values=(0,'OFF',1,'ON')
+        values=(0,1),
+        cast=int
     )
     # CALibration Subsystem Commands
     _calibration_adc = Instrument.measurement(
@@ -235,7 +250,8 @@ class Agilent3446xA(Instrument):
     _calibration_count = Instrument.measurement(
         "CAL:COUN?",
         """ A parameter of the total number of calibrations made
-            on the device. """
+            on the device. """,
+        cast=int
     )
     calibration_date = Instrument.measurement(
         "CAL:DATE?",
@@ -252,15 +268,16 @@ class Agilent3446xA(Instrument):
     _calibration_secure = Instrument.control(
         "CAL:SEC:STAT?",
         "CAL:SEC:STAT %s",
-        """ A parameter that unsecures/secures the instrument
-            calibration setting. """,
+        """ An integer parameter to secure the
+            instrument calibration setting. """,
         validator=strict_discrete_set,
-        values=(0,'OFF',1,'ON')
+        values=(0,1),
+        cast=int
     ) # TODO setter condition for input of security code after state value
     _calibration_string = Instrument.control(
         "CAL:STR?",
         'CAL:STR "%s"',
-        """ Stores a string in the calibration memory. """
+        """ A string parameter stored in the calibration memory. """
     )
     calibration_temp = Instrument.measurement(
         "CAL:TEMP?",
@@ -283,63 +300,63 @@ class Agilent3446xA(Instrument):
             cast=float
     )
     # CONFigure Subsystem Commands
-    configure_get = Instrument.measurement(
+    _configure_get = Instrument.measurement(
         "CONF?",
         """ Returns a list of strings indicating the
             present function, range and resolution. """,
         get_process=lambda result: result.split(',')
     )
     _configure_capacitance = Instrument.setting(
-        "CONF:CAP %s",
+        "CONF:CAP %g",
         """ A parameter that takes a list input of the
             range for capacitance measurements. The resolution
             is fixed at 4.5 digits. """,
         validator=truncated_discrete_set,
-        values=(1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,'AUTO','MIN','MAX','DEF')
+        values=(1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3)
     )
     _configure_current_ac_range = Instrument.setting(
-        "CONF:CURR:AC %s",
+        "CONF:CURR:AC %g",
         """ TODO """
         validator=truncated_discrete_set,
-        values=(1e-4,1e-3,1e-2,1e-1,1,3,10,'AUTO','MIN','MAX','DEF')
+        values=(1e-4,1e-3,1e-2,1e-1,1,3,10)
     )
     _configure_current_dc_range = Instrument.setting(
-        "CONF:CURR:DC %s",
+        "CONF:CURR:DC %g",
         """ TODO """,
         validator=truncated_discrete_set,
-        values=(1e-4,1e-3,1e-2,1e-1,1,3,10,'AUTO','MIN','MAX','DEF')
+        values=(1e-4,1e-3,1e-2,1e-1,1,3,10)
     )
     _configure_resistance_range_2_wire = Instrument.setting(
-        "CONF:RES %s",
+        "CONF:RES %g",
         """ Set all measurement and trigger parameters
             to their default values for 2 wire resistance
             measurements and set the range. """,
         validator=truncated_discrete_set,
-        values=(1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9,'AUTO','DEF')
+        values=(1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9)
     )
     _configure_resistance_range_4_wire = Instrument.setting(
-        "CONF:FRES %s",
+        "CONF:FRES %g",
         """ Set all measurement and trigger parameters
             to their default values for 4 wire resistance
             measurements and set the range. """,
         validator=truncated_discrete_set,
-        values=(1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9,'AUTO','DEF')
+        values=(1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9)
     )
     _configure_voltage_ac_range = Instrument.setting(
-        "CONF:VOLT:AC %s",
+        "CONF:VOLT:AC %g",
         """ Set all measurement and trigger parameters
             to their default values for AC voltage
             measurements and set the range. """,
         validator=truncated_discrete_set,
-        values=(1e-1,1,1e1,1e2,1e3,'AUTO','DEF')
+        values=(1e-1,1,1e1,1e2,1e3)
     )
     _configure_voltage_dc_range = Instrument.setting(
-        "CONF:VOLT:DC %s",
+        "CONF:VOLT:DC %g",
         """ Set all measurement and trigger parameters
             to their default values for DC voltage
             measurements and set the range. """,
         validator=truncated_discrete_set,
-        values=(1e-1,1,1e1,1e2,1e3,'AUTO','DEF')
+        values=(1e-1,1,1e1,1e2,1e3)
     )
     # DATA Subsystem Commands
     data_points_last = Instrument.measurement(
@@ -349,7 +366,8 @@ class Agilent3446xA(Instrument):
     )
     data_points_count = Instrument.measurement(
         "DATA:POIN?",
-        """ Return the total number of measurements in memory. """
+        """ Return the total number of measurements in memory. """,
+        cast=int
     )
     data_points_threshold = Instrument.control(
         "DATA:POIN:EVEN:THR?",
@@ -357,18 +375,19 @@ class Agilent3446xA(Instrument):
         """ An integer parameter that sets the number of
             data points to store before setting bit 9 in
             the Standard Operation Register to 1.""",
-        validator=truncated_range,
-        values=(1,2e6)
+        validator=truncated_discrete_set,
+        values=arange(1,2e6,1),
+        cast=int
     )
     # DISPlay Subsystem Commands
     display_enable = Instrument.control(
         "DISP:STAT?",
-        "DISP:STAT %s",
-        """ A string parameter that enables/disables
+        "DISP:STAT %i",
+        """ An integer parameter to enable
             the front panel display. """,
         validator=strict_discrete_set,
-        values={'OFF':0,'ON':1},
-        map_values=True
+        values=(0,1),
+        cast=int
     )
     display_text = Instrument.control(
         "DISP:TEXT?",
@@ -395,7 +414,8 @@ class Agilent3446xA(Instrument):
         """ A string parameter for the
             binary block transfer property. """,
         validator=strict_discrete_set,
-        values={'normal':'NORM','swapped':'SWAP'},
+        values={'normal':'NORM',
+                'swapped':'SWAP'},
         map_values=True
     )
     format_data = Instrument.control(
@@ -403,15 +423,17 @@ class Agilent3446xA(Instrument):
         "FORM:DATA %s",
         """ A string parameter for the data format. """,
         validator=strict_discrete_set,
-        values={'ascii':'ASC','real':'REAL'},
+        values={'ascii':'ASC',
+                'real':'REAL'},
         map_values=True
     )
     # HCOPy Subsystem Commands
     panel_image_format = Instrument.control(
         "HCOP:SDUM:DATA:FORM?",
         "HCOP:SDUM:DATA:FORM %s",
-        """ A string parameter that sets the image
-            file format for the front panel screen shot. """,
+        """ A string parameter for the image
+            file format used for the front
+            panel screen shot. """,
         validator=strict_discrete_set,
         values=('PNG','BMP')
     )
@@ -421,7 +443,7 @@ class Agilent3446xA(Instrument):
     lxi_identify_enable = Instrument.control(
         "LXI:IDEN:STAT?",
         "LXI:IDEN:STAT %i",
-        """ An integer parameter that enables the LXI
+        """ An integer parameter to enable the LXI
             web identification by the LAN address. """,
         validator=strict_discrete_set,
         values=(0,1),
@@ -430,7 +452,7 @@ class Agilent3446xA(Instrument):
     lxi_mdns_enable = Instrument.control(
         "LXI:MDNS:ENAB?",
         "LXI:MDNS:ENAB %i",
-        """ An integer parameter that enables the LXI
+        """ An integer parameter to enable the LXI
             multicast domain name system (mDNS) that
             provides DNS service discovery on a network
             without a DNS server.""",
@@ -461,6 +483,7 @@ class Agilent3446xA(Instrument):
             service name. """
     )
     # MEASure Subsystem Commands
+    """ Not implemented. """
     # MMEMory Subsystem Commands - General Purpose & File Management
     """ TODO """
     # MMEMory Subsystem Commands - STATe and PREFerence Files
@@ -471,26 +494,29 @@ class Agilent3446xA(Instrument):
     sample_count = Instrument.control(
         "SAMP:COUN?",
         "SAMP:COUN %s",
-        """ An integer (or string) parameter for the number
+        """ An integer parameter for the number
             of sample measurements made per trigger.""",
-        validator=joined_validators(truncated_range,strict_discrete_set),
-        values=[[1,1e9],['MIN','MAX','DEF']]
+        validator=truncated_discrete_set,
+        values=arange(1,1e9,1),
+        cast=int
     )
     sample_count_pretrigger = Instrument.control(
         "SAMP:COUN:PRET?",
         "SAMP:COUN:PRET %s",
-        """ An integer (or string) parameter for the
+        """ An integer parameter for the
             number of samples to be collected and
             saved in memory before the trigger. """,
-        validator=joined_validators(truncated_range,strict_discrete_set),
-        values=[[0,1999999],['MIN','MAX','DEF']]
+        validator=truncated_discrete_set,
+        values=arange(0,1999999,1),
+        cast=int
     )
     sample_source = Instrument.control(
         "SAMP:SOUR?",
         "SAMP:SOUR %s",
         """ A string parameter for the source of the trigger signal. """,
         validator=strict_discrete_set,
-        values={'timer':'TIM','immediate','IMM'},
+        values={'timer':    'TIM',
+                'immediate':'IMM'},
         map_values=True
     )
     sample_timer = Instrument.control(
@@ -499,7 +525,10 @@ class Agilent3446xA(Instrument):
         """ A string parameter for the sample
             interval for timed sampling. """,
         validator=strict_discrete_set,
-        values=['MIN','MAX','DEF']
+        values={'minimum':'MIN',
+                'maximum':'MAX',
+                'defualt':'DEF'},
+        map_values=True
     )
     # SENSe Subsystem Commands
     sense_function = Instrument.control(
@@ -520,7 +549,7 @@ class Agilent3446xA(Instrument):
                 'temperature':      '"TEMP"',
                 'ac voltage':       '"VOLT:AC"',
                 'dc voltage':       '"VOLT"',
-                'dc voltage ratio': '"VOLT:RAT"'},
+                'dc ratio':         '"VOLT:RAT"'},
         map_values=True
     )
     # SENSe Subsystem Commands - Capacitance
@@ -586,11 +615,11 @@ class Agilent3446xA(Instrument):
     # SENSe Subsystem Commands - Resistance
     sense_resistance_aperature = Instrument.control(
         "SENS:RES:APER?",
-        "SENS:RES:APER %s",
-        """ A float or string parameter for the integration time / s.
+        "SENS:RES:APER %g",
+        """ A float parameter for the integration time / s.
             Common to both 2 and 4 wire resistance measurements. """,
-        validator=joined_validators(truncated_range,strict_discrete_set),
-        values=[arange(2e-5,1,2e-6),['MIN','MAX','DEF']]
+        validator=truncated_discrete_set,
+        values=arange(2e-5,1,2e-6,dtype=float)
     )
     sense_resistance_aperature_enable = Instrument.control(
         "SENS:RES:APER:ENAB?",
@@ -604,12 +633,12 @@ class Agilent3446xA(Instrument):
     sense_resistance_nplc = Instrument.control(
         "SENS:RES:NPLC?",
         "SENS:RES:NPLC %s",
-        """ A float or string parameter for the resistance
+        """ A float parameter for the resistance
             measurement integration time as the number of
             power line cycles. Common to both 2 and 4 wire
             resistance measurements. """,
-        validator=joined_validators(truncated_discrete_set,strict_discrete_set),
-        values=([0.001,0.002,0.006,0.02,0.06,0.2,1,10,100],['MIN','MAX','DEF'])
+        validator=truncated_discrete_set,
+        values=(0.001,0.002,0.006,0.02,0.06,0.2,1,10,100)
     )
     sense_resistance_null_enable = Instrument.control(
         "SENS:RES:NULL:STAT?",
@@ -658,8 +687,8 @@ class Agilent3446xA(Instrument):
         "SENS:RES:RANG %s",
         """ A string or float parameter for a fixed measurement range.
             Common to both 2 and 4 wire resistance measurements. """,
-        validator=joined_validators(strict_discrete_set,truncated_discrete_set),
-        values=[[1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9],['MIN','MAX','DEF']]
+        validator=truncated_discrete_set,
+        values=(1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9)
     )
     sense_resistance_range_auto_enable = Instrument.control(
         "SENS:RES:RANG:AUTO?",
@@ -675,7 +704,10 @@ class Agilent3446xA(Instrument):
         """ A string parameter for the measurement range.
             Common to both 2 and 4 wire resistance measurements. """,
         validator=strict_discrete_set,
-        values=['MIN','MAX','DEF']
+        values={'minimum':'MIN',
+                'maximum':'MAX',
+                'defualt':'DEF'},
+        map_values=True
     )
     sense_resistance_secondary = Instrument.control(
         "SENS:RES:SEC?",
@@ -693,7 +725,9 @@ class Agilent3446xA(Instrument):
         """ A string parameter for the 2 wire resistance measurement
             auto zeroing state. """,
         validator=strict_discrete_set,
-        values={'off':0,'on':1,'once':'ONCE'},
+        values={'off':  'OFF',
+                'on':   'ON',
+                'once': 'ONCE'},
         map_values=True
     )
     # SENSe Subsystem Commands - Temperature
@@ -701,11 +735,12 @@ class Agilent3446xA(Instrument):
     # SENSe Subsystem Commands - Voltage
     sense_voltage_ac_bandwidth = Instrument.control(
         "SENS:VOLT:AC:BAND?",
-        "SENS:VOLT:AC:BAND %s",
+        "SENS:VOLT:AC:BAND %i",
         """ A float or string parameter for the AC voltage
             bandwidth integration rate. """,
-        validator=joined_validators(truncated_discrete_set,strict_discrete_set),
-        values=[[3,20,200],['MIN','MAX','DEF']]
+        validator=truncated_discrete_set,
+        values=(3,20,200),
+        cast=int
     )
     sense_voltage_ac_null_enable = Instrument.control(
         "SENS:VOLT:AC:NULL:STAT?",
@@ -759,55 +794,61 @@ class Agilent3446xA(Instrument):
     )
     sense_voltage_ac_range = Instrument.control(
         "SENS:VOLT:AC:RANG:VAL?",
-        "SENS:VOLT:AC:RANG %s",
-        """ A float or string parameter for the AC voltage range.
+        "SENS:VOLT:AC:RANG %g",
+        """ A float parameter for the AC voltage range.
             The AC voltage range is independent from the DC value. """,
-        validator=joined_validators(truncated_discrete_set,strict_discrete_set),
-        values=[[1e-1,1,1e1,1e2,1e3],['MIN','MAX','DEF']]
+        validator=truncated_discrete_set,
+        values=(1e-1,1,1e1,1e2,1e3)
     )
     sense_voltage_dc_range = Instrument.control(
         "SENS:VOLT:DC:RANG:VAL?",
         "SENS:VOLT:DC:RANG %s",
-        """ A float or string parameter for the DC voltage range.
+        """ A float parameter for the DC voltage range.
             The DC voltage range is independent from the AC value. """,
-        validator=joined_validators(truncated_discrete_set,strict_discrete_set),
-        values=[[1e-1,1,1e1,1e2,1e3],['MIN','MAX','DEF']]
+        validator=truncated_discrete_set,
+        values=(1e-1,1,1e1,1e2,1e3)
     )
     sense_voltage_ac_range_auto_enable = Instrument.control(
         "SENS:VOLT:AC:RANG:AUTO?",
         "SENS:VOLT:AC:RANG:AUTO %s",
-        """ An integer parameter to enable the AC voltage auto range.
+        """ A string parameter to enable the AC voltage auto range.
             The AC voltage null value is independent from the DC value. """,
         validator=strict_discrete_set,
-        values=(0,1,'OFF','ON','ONCE')
+        values={'off':  'OFF',
+                'on':   'ON',
+                'once': 'ONCE'},
+        map_values=True
     )
     sense_voltage_dc_range_auto_enable = Instrument.control(
         "SENS:VOLT:DC:RANG:AUTO?",
         "SENS:VOLT:DC:RANG:AUTO %s",
-        """ An integer parameter to enable the DC voltage auto range.
+        """ A string parameter to enable the DC voltage auto range.
             The DC voltage null value is independent from the AC value. """,
         validator=strict_discrete_set,
-        values=(0,1,'OFF','ON','ONCE')
+        values={'off':  'OFF',
+                'on':   'ON',
+                'once': 'ONCE'},
+        map_values=True
     )
     sense_voltage_ac_secondary = Instrument.control(
         "SENS:VOLT:AC:SEC?",
-        "SENS:VOLT:AC:SEC %g",
-        """ A string parameter for the AC voltage secondary
-            measurement function. """,
+        "SENS:VOLT:AC:SEC %s",
+        """ A string parameter for the AC voltage
+            secondary measurement function. """,
         validator=strict_discrete_set,
-        values={'off':'"OFF"',
-                'raw':'"CALC:DATA"',
-                'signal frequency':'"FREQ"',
-                'dc voltage':'"VOLT"'},
+        values={'off':              '"OFF"',
+                'raw':              '"CALC:DATA"',
+                'signal frequency': '"FREQ"',
+                'dc voltage':       '"VOLT"'},
         map_values=True
     )
     sense_voltage_dc_aperature_value = Instrument.control(
         "SENS:VOLT:DC:APER?",
-        "SENS:VOLT:DC:APER %s",
-        """ A float or string parameter for the DC
+        "SENS:VOLT:DC:APER %g",
+        """ A float parameter for the DC
             voltage aperature integration time / s. """,
-        validator=joined_validators(truncated_discrete_set,strict_discrete_set),
-        values=[np.arange(2e-4,1,2e-6),['MIN','MAX','DEF']]
+        validator=truncated_discrete_set,
+        values=np.arange(2e-4,1,2e-6)
     )
     sense_voltage_dc_aperature_enable = Instrument.control(
         "SENS:VOLT:DC:APER:ENAB?",
@@ -815,7 +856,8 @@ class Agilent3446xA(Instrument):
         """ An integer parameter to enable the DC
             voltage aperature integration state. """,
         validator=strict_discrete_set,
-        values=(0,1)
+        values=(0,1),
+        cast=int
     )
     sense_voltage_dc_impedance_auto = Instrument.control(
         "SENS:VOLT:DC:IMP:AUTO?",
@@ -827,7 +869,8 @@ class Agilent3446xA(Instrument):
                 10e6 Ohm for DC voltage ranges > 10 V.
             When disabled, the input impdance is fixed at 10e6 Ohm.""",
         validator=strict_discrete_set,
-        values=(0,1)
+        values=(0,1),
+        cast=int
     )
     sense_voltage_dc_nplc = Instrument.control(
         "SENS:VOLT:DC:NPLC?",
@@ -835,8 +878,8 @@ class Agilent3446xA(Instrument):
         """ A float or string parameter for the DC voltage
             measurement integration time as the number of
             power line cycles. """,
-        validator=joined_validators(truncated_discrete_set,strict_discrete_set),
-        values=([0.001,0.002,0.006,0.02,0.06,0.2,1,10,100],['MIN','MAX','DEF'])
+        validator=truncated_discrete_set,
+        values=(0.001,0.002,0.006,0.02,0.06,0.2,1,10,100)
     )
     sense_voltage_dc_ratio_secondary = Instrument.control(
         "SENS:VOLT:DC:RAT:SEC?",
@@ -851,16 +894,16 @@ class Agilent3446xA(Instrument):
     )
     sense_voltage_dc_resolution = Instrument.control(
         "SENS:VOLT:DC:RES?",
-        "SENS:VOLT:DC:RES %s",
-        """ A string parameter that sets the DC voltage and
+        "SENS:VOLT:DC:RES %g",
+        """ A float parameter that sets the DC voltage and
             DC voltage ratio measurement resolution.""",
-        validator=joined_validators(truncated_range,strict_discrete_set),
-        values=[[1e-9,1e4],['MIN','MAX','DEF']]
+        validator=truncated_range,
+        values=(1e-9,1e4)
     )
     sense_voltage_dc_secondary = Instrument.control(
         "SENS:VOLT:DC:SEC?",
         "SENS:VOLT:DC:SEC %s",
-        """ """,
+        """ TODO """,
         validator=strict_discrete_set,
         values={'off':          '"OFF"',
                 'no math':      '"CALC:DATA"',
@@ -874,7 +917,9 @@ class Agilent3446xA(Instrument):
         """ A string parameter for the DC voltage and
             DC voltage ratio auto zeroing state. """,
         validator=strict_discrete_set,
-        values={'off':0,'on':1,'once':'ONCE'},
+        values={'off':  'OFF',
+                'on':   'ON',
+                'once': 'ONCE'},
         map_values=True
     )
     # STATus Subsystem Commands
@@ -908,14 +953,146 @@ class Agilent3446xA(Instrument):
         values=(0,1),
         cast=int
     )
+    system_click_enable = Instrument.control(
+        "SYST:CLIC:STAT?",
+        "SYTS:CLIC:TAT %i",
+        """ An integer parameter to enable
+            the audible click produced when
+            a key is pressed. """,
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=int
+    )
+    system_date = Instrument.control(
+        "SYST:DATE?",
+        "SYST:DATE %s",
+        """ A list parameter that sets the system date.
+            The list elements are: [<yyyy>,<mm>,<dd>]. """,
+        set_process=lambda v:'{},{},{}'.format([v[0],v[1],v[2]])
+    )
+    error_get = Instrument.measurement(
+        "SYST:ERR:NEXT?",
+        """ Read and clear one error from the queue.
+            Errors are retrieved following the
+            first-in-first-out scheme. """
+    )
+    system_label = Instrument.control(
+        "SYST:LAB?",
+        "SYST:LAB %s",
+        """ Place a message at the bottom half
+            of the instrument's front panel. """
+    )
+    system_line_frequency = Instrument.measurement(
+        "SYST:LFR?",
+        """ A float parameter of the
+            queried line frequency / Hz."""
+    )
+    system_security_count = Instrument.measurement(
+        "SYST:SEC:COUN?",
+        """ An integer parameter that returns
+            the instrument security count. The
+            security count is incremented by 1
+            each time an action is performed
+            that requires a security unlock.
+            Calibration does not change the count.""",
+        cast=int
+    )
+    system_temperature = Instrument.measurement(
+        "SYST:TEMP?",
+        """ A float parameter of the internal temperature / °C. """
+    )
+    system_time = Instrument.control(
+        "SYST:TIME?",
+        "SYST:TIME %s",
+        """ A list parameter for the system time.
+            The list elements are: [<hh>,<mm>,<ss.sss>].""",
+        set_process=lambda v:'{},{},{}'.format([v[0],v[1],v[2]])
+    )
+    system_time_warmup = Instrument.measurement(
+        "SYST:UPT?",
+        """ A list parameter for the amount of time
+            the system has been powered on. The list
+            elements are: [<dd>,<hh>,<mm>,<ss>]. """
+    )
+    system_scpi_version = Instrument.measurement(
+        "SYST:VERS?",
+        """ A float parameter for the version of SCPI
+            that the instrument complies with."""
+    )
+    system_power_message = Instrument.control(
+        "SYST:WMES?",
+        'SYST:WMES "%s"',
+        """ TODO """
+    )
     # SYSTem Subsystem Commands - I/O Configuration
-
+    """ TODO """
     # SYSTem Subsystem Commands - LOCK
-
+    """ TODO """
     # SYSTem Subsystem Commands - LICense
-
+    """ TODO """
     # TRIGger Subsystem Commands
-
+    trigger_count = Instrument.control(
+        "TRIG:COUN?",
+        "TRIG:COUN %i",
+        """ A property for the number of triggers
+            accepted before returning to idle. """,
+        validator=strict_discrete_set,
+        values=(1,9.9E37),
+        cast=int,
+        set_process=lambda v: 1e6 if v != 9.9E37 and v > 1e6 else v
+    )
+    trigger_delay_value = Instrument.control(
+        "TRIG:DEL?",
+        "TRIG:DEL %g",
+        """ A float property for the period / s
+            between the trigger signal
+            and the first measurement. """,
+        validator=truncated_discrete_set,
+        values=(0,3600)
+    )
+    trigger_delay_auto_enable = Instrument.control(
+        "TRIG:DEL:AUTO?",
+        "TRIG:DEL:AUTO %i",
+        """ An integer property to enable
+            the automatic trigger delay. """,
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=int
+    )
+    trigger_level = Instrument.control(
+        "TRIG:LEV?",
+        "TRIG:LEV %s",
+        """ A string property for the
+            level on which the trigger occurs
+            when level triggering is enabled. """,
+        validator=strict_discrete_set,
+        values={'minimum':'MIN',
+                'maximum':'MAX',
+                'defualt':'DEF'},
+        map_values=True
+    )
+    trigger_slope = Instrument.control(
+        "TRIG:SLOP?",
+        "TRIG:SLOP %s",
+        """ A string parameter for the polarity
+            of the external source level trigger. """,
+        validator=strict_discrete_set,
+        values={'positive':'POS',
+                'negative':'NEG'},
+        map_values=True
+    )
+    trigger_source = Instrument.control(
+        "TRIG:SOUR?",
+        "TRIG:SOUR %s",
+        """ A string parameter for the
+            trigger signal source. """,
+        validator=strict_discrete_set,
+        values={'immediate':    'IMM',
+                'external':     'EXT',
+                'bus':          'BUS',
+                'internal':     'INT'},
+        map_values=True
+    )
     def __init__(self, adapter, **kwargs):
         super(Agilent3446xA, self).__init__(adapter,
         "Agilent 3446(7)xA Truevolt Digital Multimeter", **kwargs)
@@ -993,8 +1170,6 @@ class Agilent3446xA(Instrument):
     def display_clear(self):
         """ Clear the text message from the front panel display. """
         self.write("DISP:TEXT:CLE")
-    # FORMat Subsystem Commands
-    """ None """
     # HCOPy Subsystem Commands
     @property
     def panel_image_capture(self):
@@ -1013,142 +1188,13 @@ class Agilent3446xA(Instrument):
             :func :. """ # TODO finish function name for SYST:COMM:LAN
         self.write("LXI:REST")
     # MEASure Subsystem Commands
-    def _measure_capacitance(self, range='AUTO'):
-        """ TODO """
-        if range in (1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,'AUTO','MIN','MAX','DEF'):
-            return float(self.ask("MEAS:CAP? {}".format(range)))
-        else:
-            raise ValueError('{} is not a valid range setting.'.format(range))
-    def _measure_continuity(self):
-        """ TODO """
-        return float(self.ask("MEAS:CONT?"))
-    def _measure_current(self,mode='DC',range='DEF',resolution_factor='DEF'):
-        """ TODO """
-        if mode in ('DC','AC'):
-            if range in (1e-4,1e-3,1e-2,1e-1,1,3,10,'AUTO','MIN','MAX','DEF'):
-                if resolution in ('MIN','MAX','DEF'): # TODO add other values
-                    return float(self.ask("MEAS:CURR:{}? {}, {}".format(
-                        mode, range, resolution)))
-                else:
-                    raise ValueError('''{} is not a valid resolution.
-                                        '''.format(resolution))
-            else:
-                raise ValueError('{} is not a valid range.'.format(range))
-        else:
-            raise ValueError('{} is not a valid mode.'.format(mode))#TODO
-    def _measure_diode(self):
-        """ TODO """
-        return float(self.ask('MEAS:DIOD?'))
-    def _measure_frequnecy(self,range=None,resolution=None):
-        """ TODO """
-        if (range > 3 and range < 3e5) or range in ('MIN','MAX','DEF'):
-            if resolution in ('MIN','MAX','DEF'):
-                return float(self.ask('MEAS:FREQ? {}, {}'.format(range,
-                                                                 resolution)))
-            elif resolution is None:
-                return float(self.ask('MEAS:FREQ? {}'.format(range)))
-            else:
-                raise ValueError('''{} is not a valid resolution.
-                                    '''.format(resolution))
-        elif range is None:
-            return float(self.ask('MEAS:FREQ?'))
-        else:
-            raise ValueError('{} is not a valid range.'.format(range))#TODO
-    def _measure_period(self,range=None,resolution=None):
-        """ TODO """
-        if (range > 3.3e-6 and range < 3.3e-1) or range in ('MIN','MAX','DEF'):
-            if resolution in ('MIN','MAX','DEF'):
-                return float(self.ask('MEAS:PER? {}, {}'.format(range,
-                                                                 resolution)))
-            elif resolution is None:
-                return float(self.ask('MEAS:PER? {}'.format(range)))
-            else:
-                raise ValueError('''{} is not a valid resolution.
-                                    '''.format(resolution))
-        elif range is None:
-            return float(self.ask('MEAS:PER?'))
-        else:
-            raise ValueError('{} is not a valid range.'.format(range))#TODO
-    def _measure_resistance(self,n_wires=4,range='DEF',resolution='DEF'):
-        """ TODO """
-        if n_wires == 2:
-            _mode = 'RES'
-        elif n_wires == 4:
-            _mode = 'FRES'
-        else:
-            raise ValueError('{} is not valid for n_wires'.format(n_wires))
-
-        if range in (1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9,'MIN','MAX'):
-            if resolution in _resolution_factor:
-                return float('MEAS:{}? {},{}'.format(_mode,range,resolution))
-            elif resolution in ('MIN','MAX','DEF'):
-                return float('MEAS:{}? {},{}'.format(_mode,range,resolution))
-            else:
-                raise ValueError('''{} is not a valid resolution.
-                                    '''.format(resolution))
-        elif range in ('DEF','AUTO') and resolution is 'DEF':
-            return float('MEAS:{}? {}'.format(_mode,range))
-        elif range in ('DEF','AUTO') and resolution is not 'DEF':
-            raise ValueError("Range is 'AUTO'/'DEF'; resolution must be 'DEF'.")
-        else:
-            raise ValueError('{} is not a valid range.'.format(range))
-    def _measure_temperature(self,probe='DEF',probe_type='DEF',resolution'DEF'):
-        """ TODO """
-        if ((probe in ('FRTD','RTD','DEF') and probe_type in ('DEF',85))
-        or  (probe in ('FTH','TH') and probe_type in ('DEF',5000))
-        or  (probe is 'TC' and probe_type in ('DEF','E','J','K','N','R','T'))):
-            if (resolution in _resolution_factor or resolution in
-                ('MIN','MAX','DEF')):
-                return float(self.ask('MEAS:TEMP? {},{},1,{}'.format(probe,
-                                                    probe_type,resolution)))
-            else:
-                raise ValueError('{} is not a valid resolution.'.format(
-                                                                resolution))
-        else:
-            raise ValueError('''The input value(s), or combination of values,
-                                for probe and probe_type are not valid.''')
-    def _measure_voltage(self,mode='DC',range='DEF',resolution='DEF'):
-        if range in (1e-1,1,1e1,1e2,1e3,'MIN','MAX','AUTO','DEF'):
-            if mode is 'DC':
-                if (resolution in _resolution_factor or resolution in
-                ('MIN','MAX','AUTO','DEF')):
-                    return float(self.ask('MEAS:VOLT:DC? {},{}'.format(range,
-                                                                resolution)))
-                else:
-                    raise ValueError('{} is not a valid resolution.'.format(
-                                                                    resolution))
-            elif mode is 'AC':
-                return float(self.ask('MEAS:VOLT:AC? {}'.format(range)))
-            else:
-                raise ValueError('{} is not a valid mode.'.format(mode))
-        else:
-            raise ValueError('{} is not a valid range.'.format(range))
-    def _measure_voltage_dc_ratio(self,range='DEF',resolution='DEF'):
-        """ TODO """
-        if range in (1e-1,1,1e1,1e2,1e3,'MIN','MAX','AUTO','DEF'):
-            if resolution in _resolution_factor or resolution in
-            ('MIN','MAX','DEF'):
-                return float(self.ask('MEAS:VOLT:DC:RAT? {},{}'.format(range,
-                                                                resolution))))
-            else:
-                raise ValueError('{} is not a valid resolution.'.format(
-                                                                    resolution))
-        else:
-            raise ValueError('{} is not a valid range.'.format(range))
+    """ Not implemented. """
     # MMEMory Subsystem Commands - General Purpose & File Management
     """ TODO """
     # MMEMory Subsystem Commands - STATe and PREFerence Files
     """ TODO """
     # MMEMory Subsystem Commands - Data Transfer
     """ TODO """
-    # SAMPle Subsystem Commands
-    """ None """
-    # SENSe Subsystem Commands
-    """ None """
-    # SENSe Subsystem Commands - Capacitance
-    """ None """
-    # SENSe Subsystem Commands - Current
-    """ None """
     # SENSe Subsystem Commands - Data2
     @property
     def sense_secondary_clear(self):
@@ -1168,12 +1214,20 @@ class Agilent3446xA(Instrument):
     def system_beep(self):
         """ Issue a single beep. """
         self.write("SYST:BEEP:IMM")
+    @property
+    def system_local(self):
+        """ Set the instrument state to local. """
+        self.write("SYST:LOC")
+    @property
+    def system_preset(self):
+        """ Reset the instrument for front panel operation. """
+        self.write("SYST:PRES")
     # SYSTem Subsystem Commands - I/O Configuration
-
+    """ TODO """
     # SYSTem Subsystem Commands - LOCK
-
+    """ TODO """
     # SYSTem Subsystem Commands - LICense
-
+    """ TODO """
     # TRIGger Subsystem Commands
     @property
     def trigger_abort(self):
@@ -1185,3 +1239,38 @@ class Agilent3446xA(Instrument):
         """ Sends command to arm, initialize
             and trigger the device.  """
         self.write(":ARM;:TRIG;:INIT;*TRG")
+    # Convenience Functions
+    def measure_configure(self,mode=None):
+        """ TODO """
+        if mode is None:
+            return self._configure_get
+        elif (mode is 'capacitance') or (mode is 'CAP'):
+            pass
+        elif (mode is 'continuity') or (mode is 'CONT'):
+            pass
+        elif (mode is 'ac current') or (mode is 'ACC'):
+            pass
+        elif (mode is 'dc current') or (mode is 'DCC'):
+            pass
+        elif (mode is 'diode') or (mode is 'DIOD'):
+            pass
+        elif (mode is 'frequency') or (mode is 'FREQ'):
+            pass
+        elif (mode is 'period') or (mode is 'PER'):
+            pass
+        elif (mode is 'resistance') or (mode is 'RES'):
+            pass
+        elif (mode is 'temperature') or (mode is 'TEMP'):
+            pass
+        elif (mode is 'ac voltage') or (mode is 'ACV'):
+            pass
+        elif (mode is 'dc voltage') or (mode is 'DCV'):
+            pass
+        elif (mode is 'dc ratio') or (mode is 'DCR'):
+            pass
+        else:
+            raise ValueError('Input for mode is not an acceptable value.')
+    def measure_immediate(self):
+        """ """
+    def measure_triggered(self):
+        """ """
