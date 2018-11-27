@@ -1161,7 +1161,7 @@ class Agilent3446xA(Instrument):
         """
         if kwargs.get('timeout') is not None:
             pass # TODO change timeout value
-        if wait:
+        if wait_for_values:
             self.values('DATA:REMOVE? %i, WAIT') % num_readings
         else:
             self.values('DATA:REMOVE %i') % num_readings
