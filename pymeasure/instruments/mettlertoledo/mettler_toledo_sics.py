@@ -55,6 +55,18 @@ class MettlerToledoSICS(Instrument):
         "I5",
         "A string parameter with the software identification number.",
         get_process=lambda v:v.split(' ')[-1])
+    send_stable=Instrument.measurement(
+        "S",
+        """ Cancel existing commands and send
+            the next stable weighing result. """,
+        get_process=lambda v:v.split()[1]
+    )
+    send_immediate=Instrument.measurement(
+        "SI",
+        """ Cancel existing commands and send
+            the immediate weighing result. """,
+        get_process=lambda v:v.split()[1]
+    )
     zero=Instrument.measurement(
         "Z",
         "Zero the balance when stable.")
@@ -64,51 +76,170 @@ class MettlerToledoSICS(Instrument):
     reset=Instrument.setting(
         "@",
         "Reset balance without zeroing.")
-
-
+    # level 1
+    display_text=Instrument.setting(
+        'D %s',
+        """ Display text on the balance screen. """
+    )
+    tare_stable=Instrument.measurement(
+        "T",
+        """ Tare the balance when stable and
+            return the value stored to the
+            tare memory.""",
+        get_process=lambda v:v.split()[-2]
+    )
+    tare_value=Instrument.control(
+        "TA",
+        "TA %s",
+        """ A float property for the mass
+            stored in the tare memory. """,
+        unit=kwargs.get('unit','g'),
+        set_process=lambda v:'{} {}'.format(v,unit),
+        get_process=lambda v:v.split()[-2]
+    )
+    tare_immediate=Instrument.measurement(
+        "TI",
+        """ Tare the balance immediately and
+            return the new value stored to
+            the tare memory.""",
+        get_process=lambda v:v.split()[-2]
+    )
+    # Level 2
+    calibration_setting=Instrument.control(
+        "CO",
+        "CO %s",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'manual internal':[0,0],
+                'manual external':[0,1],
+                'automatic internal':[1,0],
+                'automatic external':[1,1]},
+        map_values=True,
+        get_process=lambda v:v.split()[2:3],
+        set_process=lambda v:'{} {}'.format(v[0],v[1])
+    )
+    date=Instrument.control(
+        "DAT",
+        "DAT %s",
+        """ TODO """
+    )
+    time=Instrument.control(
+        "TIM",
+        "TIM %s",
+        """ TODO """
+    )
+    door_state=Instrument.control(
+        "WS",
+        "WS %i",
+        """ """,
+        validator=strict_discrete_set,
+        values={'close':        0,
+                'right':        1,
+                'left':         2,
+                'error':        8,
+                'intermediate': 9},
+        map_values=True,
+        get_process=lambda v:v.split()[-1]
+    )
+    mode=Instrument.control(
+        "M01",
+        "M01 %i",
+        """ """,
+        validator=strict_discrete_set,
+        values={'normal':0,
+                'dosing':1,
+                'other': 2},
+        map_values=True
+    )
+    environment=Instrument.control(
+        "M02",
+        "M02 %i",
+        """ """,
+        validator=strict_discrete_set,
+        values={'very stable':  0,
+                'stable':       1,
+                'standard':     2,
+                'unstable':     3,
+                'very unstable':4},
+        map_values=True
+    )
+    auto_zero_enable=Instrument.control(
+        "M03",
+        "M03 %i",
+        """ An integer parameter to enable the
+            balance AutoZero function.""",
+        validator=strict_discrete_set,
+        values=(0,1)
+    )
+    door_auto_enable=Instrument.control(
+        "M07",
+        "M07 %i",
+        """ An integer parameter to enable the
+            balance AutoDoor function. """,
+        validator=strict_discrete_set,
+        values=(0,1)
+    )
+    beep=Instrument.setting(
+        "M12 %i",
+        """ Create a tone. An integer parameter
+            sets the tone variant. """,
+        validator=strict_discrete_set,
+        values=(0,1,2)
+    )
+    unit=Instrument.control(
+        "M21",
+        "M21 %s",
+        """ TODO """,
+        set_process=lambda v:'{} {}'.format(unit_field,v),
+        get_process=lambda v:v.split()[-1],
+        validator=strict_discrete_set,
+        values={'gram':       0,
+                'kilogram':   1,
+                'milligram':  3,
+                'microgram':  4},
+        map_values=True
+    )
+    resolution=Instrument.control(
+        "M23",
+        "M23 %i",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'1d':       0,
+                '10d':      1,
+                '100d':     2,
+                '1000d':    3},
+        map_values=True,
+        get_process=lambda v:v.split()[-1]
+    )
+    calibration_history=Instrument.measurement(
+        "M27",
+        """ TODO """
+    )
+    temperature=Instrument.measurement(
+        "M28",
+        """ TODO """
+    )
+    stability_mode=Instrumentmeasurement(
+        "M29",
+        """ TODO """
+    )
+    
     def __init__(self,adapter,**kwargs):
-        super(MettlerToledoSICS, self).__init__(adapter,
-        "Generic Mettler Toledo SICS Balance",
-        includeSCPI=False,
-        **kwargs)
+        super(MettlerToledoSICS, self).__init__(
+        adapter, "Generic Mettler Toledo SICS Balance",
+        includeSCPI=False, **kwargs
+        )
+    # level 2 properties
     @property
-    def send_stable(self,full_output=False):
-        """ Cancel any existing commands and send the next stable
-            weighing result.
-
-            :param full_output: A boolean parameter that enables output
-                                of the device full output string. When `False`,
-                                the numeric weighing value is returned.
-        """
-        _data_str=self.ask("S")
-        if _data_str is "S":
-            raise VisaIOError("Value not read from device.")
-        if full_output:
-            return(_data_str)
-        else:
-            try:
-                return(float(_data_str.split()[1]))
-            except:
-                raise ValueError("Value could not be converted to float.")
+    def display_weight(self):
+        """ Switch main display to indicate weight. """
+        self.write("DW")
     @property
-    def send_immediate(self,full_output=False):
-    """ Cancel any existing commands and send the weighing
-        result immediately.
-
-        :param full_output: A boolean parameter that enables output
-                            of the device full output string. When `False`,
-                            the numeric weighing value is returned.
-    """
-    _data_str=self.ask("SI")
-    if _data_str is "SI":
-        raise VisaIOError("Value could not be read from device.")
-    if full_output:
-        return(_data_str)
-    else:
-        try:
-            return(float(_data_str.split()[1]))
-        except:
-            raise ValueError("Value could not be converted to float.")
-    measure_repeatidly=Instrument.measurement(
-        "SIR",
-        "Repeatedly measure & immediately send weight.")
+    def tare_clear(self):
+        """ Clear the value in the tare memory. """
+        self.write("TAC")
+    # Level 3
+    @property
+    def calibration_init(self):
+        """ Initiate an internal calibration. """
+        self.write("C3") # TODO thread + loop
