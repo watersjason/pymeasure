@@ -27,7 +27,8 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument
-from pymeasure.instruments.validators import (truncated_range,
+from pymeasure.instruments.validators import (strict_range,
+                                              truncated_range,
                                               strict_discrete_set,
                                               truncated_discrete_set)
 
@@ -52,25 +53,111 @@ class Agilent53131A(Instrument):
     ##########
     # Device #
     ##########
-
     device_system_version = Instrument.measurement(
         ':SYST:VERS?',
         """ TODO """
     )
-
     device_system_error = Instrument.measurement(
         ':SYST:ERR?',
         """ TODO """
     )
-
-    device_calibration = Instrument.measurement(
+    # CALibration subsystem
+    calibration_self = Instrument.measurement(
         '*CAL?',
-        """ TODO """,
+        """ Run an internal interpolator self-calibration.
+            Returns string parameter of `pass` or `fail`. """,
         validator=strict_discrete_set,
         values={'pass':0, 'fail':1},
         map_values=True
     )
+    calibration_count = Instrument.measurement(
+        "CAL:COUN?",
+        """ Returns an integer parameter with the number
+            of times the device has been calibrated. """,
+        get_process=lambda v:int(v)
+    )
+    calibration_data = Instrument.control(
+        "CAL:DATA?",
+        "CAL:DATA %s",
+        """ TODO """
+    )
+    calibration_security_code = Instrument.setting(
+        "CAL:SEC:CODE %s",
+        """ An integer parameter, in the range 0 to 9999999,
+            that replaces the device security code. The
+            device must be unsecured to use this command. """
+    )
+    calibration_security_enable = Instrument.control(
+        "CAL:SEC:STAT?",
+        "CAL:SEC:STAT %s",
+        """ Returns a boolean parameter that indicates if
+            the device is secured.
 
+            The security state is toggled by an iterable
+            with the elements: `boolean`, `security code`."""
+    )
+    # DISPlay subsystem
+    display_enable = Instrument.control(
+        "DISP:ENAB?",
+        "DISP:ENAB %i",
+        """ A boolean parameter that represents
+            the enabled state of the front display. """,
+        validator=strict_discrete_set,
+        values=(True,False),
+        cast=int
+    )
+    display_menu_enable = Instrument.control(
+        "DISP:MENU:STAT?",
+        "DISP:MENU:STAT %s",
+        """ A boolean parameter for the display
+            menu state. When the menu display is
+            disabled, the results are displayed. """,
+        validator=strict_discrete_set,
+        values={True:'ON',
+                False:'OFF'},
+        map_values=True,
+        cast=bool
+    )
+    display_feed = Instrument.control(
+        "DISP:WIND:TEXT:FEED?",
+        "DISP:WIND:TEXT:FEED:%s",
+        """ A string parameter for the CALC data
+            flow that is fed to the display. """,
+        validator=strict_discrete_set,
+        values=('CALC2','CALC3')
+    )
+    display_number_separation = Instrument.control(
+        "DISP:WIND:TEXT:RAD?",
+        "DISP:WIND:TEXT:RAD %s",
+        """ A string parameter for the character used
+            in numerical convention of incrementally
+            seperating numbers every 3 digits. """,
+        validator=strict_discrete_set,
+        values={'comma':'COMM',
+                'decimal':'DPO'},
+        map_values=True
+    )
+    # FORMat subsystem
+    format_data = Instrument.control(
+        "FORM:DATA?",
+        "FORM:DATA %s",
+        """ """,
+        validator=strict_discrete_set,
+        values={'ascii':'ASC',
+                'real':'REAL'},
+        map_values=True
+    )
+    # HCOPy subsystem
+    device_print_continuous = Instrument.control(
+        "HCOP:CONT?",
+        "HCOP:CONT %s",
+        """ A boolean parameter that enables
+            the printing of data results. """,
+        validator=strict_discrete_set,
+        values={True:'ON',
+                False:'OFF'},
+        map_values=True
+    )
     #########################
     # Channel Configuration #
     #########################
@@ -337,6 +424,15 @@ class Agilent53131A(Instrument):
               "Agilent 53131A Universal Counter", **kwargs)
 
         self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
+        self.channel=kwargs.get('channel',1)
+
+    @property
+    def abort(self):
+        """ A property that causes the device to abort
+            any measurements in progress. The command
+            processes as quickly as possible."""
+        self.write("ABORT")
+
 
     @property
     def trigger_init(self):
@@ -364,3 +460,18 @@ class Agilent53131A(Instrument):
         self.channel_2_trigger_level=channel_2_trigger_level
         self.channel_1_trigger_slope=channel_1_slope
         self.channel_2_trigger_slope=channel_2_slope
+    #
+    @calibration_security_enable.setter
+    def calibration_security_enable(self,state_code):
+        try:
+            state, code = state_code
+        except ValueError:
+            raise ValueError('The setting must be an iterable with the'
+                             'elements: state, security_code.')
+        strict_discrete_set(state,(0,1))
+        strict_range(code,(0,9999999))
+        self.write("CAL:SEC:STAT {}, {}".format(state,code))
+    @display_menu_enable.setter
+    def display_menu_enable(self,value):
+        if value == 0:
+            self.write("DISP:MENU:STAT OFF")
