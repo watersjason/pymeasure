@@ -32,6 +32,7 @@ from pymeasure.instruments.validators import (strict_range,
                                               strict_discrete_set,
                                               truncated_discrete_set,
                                               discreteTruncate)
+from numpy import arange
 
 class Agilent53131A(Instrument):
     """
@@ -55,17 +56,13 @@ class Agilent53131A(Instrument):
     __channel = 1
     @property
     def channel(self):
-        """ An integer property for the device channel.
-            Channel specific parameters are for the
-            value returned by this property.
-
-            Accepts/Returns
-                A value in the range: (1,2). """
+        """ Value for channel-specific device commands . """
         return self.__channel
     @channel.setter
     def channel(self, value):
         strict_discrete_set(value, self.__channel_list)
         self.__channel=value
+
     # CALCulate subsystem - commands not implemented
     # CALibration subsystem
     calibration_self = Instrument.measurement(
@@ -186,48 +183,38 @@ class Agilent53131A(Instrument):
     )
     # INPut subsystem
     input_attenuation = Instrument.control(
-        "INP{}:ATT?".format(self.channel),
-        "INP{}:ATT %i".format(self.channel),
+        "INP{}:ATT?".format(channel),
+        "INP{}:ATT %g".format(channel),
         """ An integer parameter for the channel-specific input attenuation.
             The channel is specified by the :attr:`~.Agilent53131A.channel`
-            property. """,
-        validator=strict_discrete_set,
-        values=(1,10)
+            property. """
     )
     input_coupling = Instrument.control(
-        "INP{}:COUP?".format(self.channel),
-        "INP{}:COUP %s".format(self.channel),
+        "INP{}:COUP?".format(channel),
+        "INP{}:COUP %s".format(channel),
         """ A string parameter for the channel-specific input couple. The
             channel is specified by the :attr:`~.Agilent53131A.channel`
-            property. """,
-        validator=strict_discrete_set,
-        values=('AC','DC')
+            property. """
     )
     input_filter_enable = Instrument.control(
-        "INP{}:FILT:LPAS:STAT?".format(self.channel),
-        "INP{}:FILT:LPAS:STAT %i".format(self.channel),
+        "INP{}:FILT:LPAS:STAT?".format(channel),
+        "INP{}:FILT:LPAS:STAT %i".format(channel),
         """ A boolean parameter to enable the channel-specific low-pass filter.
             The channel is specified by the :attr:`~.Agilent53131A.channel`
-            property. """,
-        validator=strict_discrete_set,
-        values=(True,False),
-        cast=int
+            property. """
     )
     input_filter_frequency = Instrument.measurement(
-        "INP{}:FILT:LPAS:FREQ?".format(self.channel),
+        "INP{}:FILT:LPAS:FREQ?".format(channel),
         """ An integer parameter for the channel-specific low-pass filter
             frequency. The channel is specified by the
             :attr:`~.Agilent53131A.channel` property. """
     )
-    input_impedance Instrument.control(
-        "INP{}:IMP?".format(self.channel),
-        "INP{}:IMP %i".format(self.channel),
+    input_impedance = Instrument.control(
+        "INP{}:IMP?".format(channel),
+        "INP{}:IMP %g".format(channel),
         """ An integer parameter for the channel-specific input impedance.
             Values for the impedance are 50, or 1e6 Ohms. The channel is
-            specified by the :attr:`~.Agilent53131A.channel` property. """,
-        validator=strict_discrete_set,
-        values=(50,1e6),
-        cast=int
+            specified by the :attr:`~.Agilent53131A.channel` property. """
     )
     # INPut3 (INP3) subsystem - commands not implemented
     # MEASure subsystem
@@ -244,8 +231,8 @@ class Agilent53131A(Instrument):
     )
     # SENSe:EVENt[1|2] subtree
     sense_common_mode = Instrument.control(
-        ':SENS:EVENT2:FEED?',
-        ':SENS:EVENT2:FEED %s',
+        'SENS:EVEN2:FEED?',
+        'SENS:EVEN2:FEED %s',
         """ A boolean parameter. When ``True``, the channel 2 feed is linked to
             the channel 1 feed. When ``False``, the channel 2 feed is
             independent of the channel 1 feed.""",
@@ -255,20 +242,18 @@ class Agilent53131A(Instrument):
         map_values=True
     )
     trigger_relative_hysteresis = Instrument.control(
-        ':SENS:EVENT{}:HYST:REL?'.format(self.channel),
-        ':SENS:EVENT{}:HYST:REL %s'.format(self.channel),
+        'SENS:EVEN{}:HYST:REL?'.format(channel),
+        'SENS:EVEN{}:HYST:REL %g'.format(channel),
         """ A channel specific float parameter for the relative hysteresis.
             Larger values of relative hysteresis have low senesitivity and
             high noise immunity. Values range from 0 to 100.
 
             The channel is set by the :attr:`~.Agilent53131A.channel` property.
-        """,
-        validator=truncated_range,
-        values=(0,100)
+        """
     )
     trigger_level = Instrument.control(
-        ':SENS:EVENT{}:LEV:ABS?'.format(self.channel),
-        ':SENS:EVENT{}:LEV:ABS %g'.format(self.channel),
+        'SENS:EVEN{}:LEV:ABS?'.format(channel),
+        'SENS:EVEN{}:LEV:ABS %g'.format(channel),
         """ A channel specific float parameter for the level at the center of
             the hysteresis window. Values range from -5.125 to 5.125 Volts.
             The actual trigger event occurs at the top of the hysteresis window
@@ -276,44 +261,34 @@ class Agilent53131A(Instrument):
             NEGative slope).
 
             The channel is set by the :attr:`~.Agilent53131A.channel` property.
-        """,
-        validator=truncated_range,
-        values=(-5.125, 5.125)
+        """
     )
     trigger_auto_enable = Instrument.control(
-        ":SENS:EVEN{}:LEV:ABS:AUTO?".format(self.channel),
-        ":SENS:EVEN{}:LEV:ABS:AUTO %i".format(self.channel),
+        "SENS:EVEN{}:LEV:ABS:AUTO?".format(channel),
+        "SENS:EVEN{}:LEV:ABS:AUTO %i".format(channel),
         """ A channel-specific boolean parameter to enable automatic selection
             of the trigger level.
 
             The channel is set by the :attr:`~.Agilent53131A.channel` property.
-        """,
-        validator=strict_discrete_set,
-        values=(True,False)
+        """
     )
     trigger_auto_level = Instrument.control(
-        ':SENS:EVENT{}:LEVEL:REL?'.format(self.channel),
-        ':SENS:EVENT{}:LEVEL:REL %g'.format(self.channel),
+        'SENS:EVEN{}:LEV:REL?'.format(channel),
+        'SENS:EVEN{}:LEV:REL %s'.format(channel),
         """ A channel-specific integer parameter for the percentage of the
             peak-to-peak range of the signal at which the intrument
-            automatically triggers. An integer value in range(0, 100, 10). """,
-        validator=discreteTruncate,
-        values=range(0, 100, 10)
+            automatically triggers. An integer value in range(0, 100, 10). """
     )
     trigger_slope_positive = Instrument.control(
-        ':SENS:EVENT{}:SLOPE?'.format(self.channel),
-        ':SENS:EVENT{}:SLOPE %i'.format(self.channel),
+        'SENS:EVEN{}:SLOP?'.format(channel),
+        'SENS:EVEN{}:SLOP %s'.format(channel),
         """ A channel-specific boolean parameter to enable the device to trigger
             on the positive slope (rising edge) of the input signal.
             When ``False``, the trigger occurs on the negative slope (falling
             edge) of the input signal.
 
             The channel is set by the :attr:`~.Agilent53131A.channel` property.
-        """,
-        validator=strict_discrete_set,
-        values={True:   'POS',
-                False:  'NEG'},
-        map_values=True
+        """
     )
     # SENSe:EVENt3 subtree - commands not implemented
     # SENSe:FREQuency:ARM subtree
@@ -351,12 +326,12 @@ class Agilent53131A(Instrument):
                 'totalize':            '"TOT"',
                 'rise time':           '"RTIM"',
                 'voltage max':         '"VOLT:MAX"',
-                'voltage max 2':       '"VOLT:MAX 2"'
-                'voltage min':         '"VOLT:MIN"'
-                'voltage min 2':       '"VOLT:MIN 2"'
-                'voltage range':       '"VOLT:PTP"'
+                'voltage max 2':       '"VOLT:MAX 2"',
+                'voltage min':         '"VOLT:MIN"',
+                'voltage min 2':       '"VOLT:MIN 2"',
+                'voltage range':       '"VOLT:PTP"',
                 'voltage range 2':     '"VOLT:PTP 2"'
- }
+                },
         map_values=True
     )
     # SENSe:PHASe:ARM subtree - commands not implemented
@@ -386,7 +361,7 @@ class Agilent53131A(Instrument):
     )
     reference_source_external = Instrument.control(
         ':SENS:ROSC:SOUR?',
-        ':SENS:ROSC:SOUR %i',
+        ':SENS:ROSC:SOUR %s',
         """ A boolean parameter that enables the external reference source.
             When ``True``, the reference signal is sourced from the external
             reference input. When ``False``, the reference signal is from the
@@ -438,7 +413,7 @@ class Agilent53131A(Instrument):
         """ An integer parameter for the number of events used to delay the
             start arm signal for time interval measurements. """,
         validator=discreteTruncate,
-        values=range(1,99999999,1),
+        values=arange(1,99999999,1),
         cast=int
     )
     interval_start_trig_source = Instrument.control(
@@ -462,12 +437,12 @@ class Agilent53131A(Instrument):
     )
     interval_start_trig_delay = Instrument.control(
         "SENS:TINT:ARM:ESTART:LAY1:TIM?",
-        "SENS:TINT:ARM:ESTART:LAY1:TIM %s",
+        "SENS:TINT:ARM:ESTART:LAY1:TIM %g",
         """ A float parameter for the time delay value used for the start arm
             event of time interval measurements. Values are in
             range(100e-9, 0.9999999, 100e-9). """,
         validator=discreteTruncate,
-        values=range(100e-9,0.9999999,100e-9)
+        values=arange(100e-9,0.9999999,100e-9)
     )
     interval_stop_arm_slope_positive = Instrument.control(
         "SENS:TINT:ARM:ESTOP:LAY2:SLOP?",
@@ -498,7 +473,7 @@ class Agilent53131A(Instrument):
         """ An integer parameter for the number of events used to delay the
             stop arm signal for time interval measurements.  """,
         validator=discreteTruncate,
-        values=range(1,99999999,1),
+        values=arange(1,99999999,1),
         cast=int
     )
     interval_stop_trig_source = Instrument.control(
@@ -522,12 +497,12 @@ class Agilent53131A(Instrument):
     )
     interval_stop_trig_delay = Instrument.control(
         "SENS:TINT:ARM:ESTOP:LAY1:TIM?",
-        "SENS:TINT:ARM:ESTOP:LAY1:TIM %s",
+        "SENS:TINT:ARM:ESTOP:LAY1:TIM %g",
         """ A float parameter for the time delay value used for the stop arm
             event of time interval measurements. Values are in
             range(100e-9, 0.9999999, 100e-9). """,
         validator=discreteTruncate,
-        values=range(100e-9,0.9999999,100e-9)
+        values=arange(100e-9,0.9999999,100e-9)
     )
     # STATus subsystem - commands not implemented
     # SYSTem subsystem - commands partially implemented
@@ -543,7 +518,8 @@ class Agilent53131A(Instrument):
                 {'error_number':<int>,
                 'error_description':<str>}
             is returned. """,
-        get_process=lambda v:{'error_number'v[0],'error_description':v[1]}
+        get_process=lambda v:{'error_number':       v[0],
+                              'error_description':  v[1]}
     )
     # TRACe subsystem - commands not implemented
     # TRIGger subsystem
@@ -559,7 +535,7 @@ class Agilent53131A(Instrument):
     def __init__(self, adapter, **kwargs):
         super(Agilent53131A, self).__init__(adapter,
               "Agilent 53131A Universal Counter", **kwargs)
-        self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
+        self.adapter.connection.timeout = (kwargs.get('timeout', 1) * 1000)
         self.format_data='ascii'
     # SCPI subsystem
     @property
@@ -578,9 +554,9 @@ class Agilent53131A(Instrument):
 #    def calibration_data(self):
 #        return self.adapter.ask_values("CAL:DATA?")
     @calibration_security_enable.setter
-    def calibration_security_enable(self,state_code):
+    def calibration_security_enable(self,value):
         try:
-            state, code = state_code
+            state, code = value
         except ValueError:
             raise ValueError('The setting must be an iterable with the'
                              'elements: state, security_code.')
@@ -592,6 +568,83 @@ class Agilent53131A(Instrument):
     def display_menu_enable(self,value):
         if value == 0:
             self.write("DISP:MENU:STAT OFF")
+    # INPut subsystem
+    @input_attenuation.setter
+    def input_attenuation(self,value):
+        strict_discrete_set(value, (1,10))
+        self.write('INP{}:ATT {}'.format(self.channel, value))
+    @input_attenuation.getter
+    def input_attenuation(self):
+        return int(self.ask('INP{}:ATT?'.format(self.channel)))
+    @input_coupling.setter
+    def input_coupling(self,value):
+        strict_discrete_set(value, ('AC','DC'))
+        self.write("INP{}:COUP {}".format(self.channel, value))
+    @input_coupling.getter
+    def input_coupling(self):
+        return self.ask("INP{}:COUP?".format(self.channel).strip())
+    @input_filter_enable.setter
+    def input_filter_enable(self,value):
+        strict_discrete_set(value,(True,False))
+        self.write('INP{}:FILT:LPAS:STAT {}'.format(self.channel,value))
+    @input_filter_enable.getter
+    def input_filter_enable(self):
+        return bool(self.ask('INP{}:FILT:LPAS:STAT?'.format(self.channel)
+                            ).strip())
+    @input_filter_frequency.getter
+    def input_filter_frequency(self):
+        return float(self.ask('INP{}:FILT:LPAS:FREQ?'.format(self.channel)
+                              ).strip())
+    @input_impedance.setter
+    def input_impedance(self,value):
+        strict_discrete_set(value,(50,1e6))
+        self.write('INP{}:IMP {}'.format(self.channel,value))
+    @input_impedance.getter
+    def input_impedance(self):
+        return float(self.ask('INP{}:IMP?'.format(self.channel)).strip())
+    #
+    @trigger_relative_hysteresis.setter
+    def trigger_relative_hysteresis(self,value):
+        truncated_discrete_set(value, (0,50,100))
+        self.write('SENS:EVEN{}:HYST:REL {}'.format(self.channel,value))
+    @trigger_relative_hysteresis.getter
+    def trigger_relative_hysteresis(self):
+        _var = self.ask('SENS:EVEN{}:HYST:REL?'.format(self.channel))
+        return int(_var.strip().split('+')[-1])
+    @trigger_level.setter
+    def trigger_level(self,value):
+        truncated_range(value, (-5.125, 5.125))
+        self.write('SENS:EVEN{}:LEV:ABS {}'.format(self.channel,value))
+    @trigger_level.getter
+    def trigger_level(self):
+        return float(self.ask('SENS:EVEN{}:LEV:ABS?'.format(self.channel)
+                              ).strip())
+    @trigger_auto_enable.setter
+    def trigger_auto_enable(self,value):
+        strict_discrete_set(value,(True,False))
+        self.write('SENS:EVEN{}:LEV:ABS:AUTO {}'.format(self.channel,value))
+    @trigger_auto_enable.getter
+    def trigger_auto_enable(self):
+        return int(self.ask('SENS:EVEN{}:LEV:ABS:AUTO?'.format(self.channel)
+                                                                    ).strip())
+    @trigger_auto_level.setter
+    def trigger_auto_level(self,value):
+        discreteTruncate(value, arange(0, 100, 10))
+        self.write('SENS:EVEN{}:LEV:REL {}'.format(self.channel,value))
+    @trigger_auto_level.getter
+    def trigger_auto_level(self):
+        return int(self.ask('SENS:EVEN{}:LEV:REL?'.format(self.channel)
+                                                    ).strip().split('+')[-1])
+    @trigger_slope_positive.setter
+    def trigger_slope_positive(self,value):
+        strict_discrete_set(value,(True,False))
+        _values={True:'POS', False:'NEG'}
+        self.write('SENS:EVEN{}:SLOP {}'.format(self.channel,_values[value]))
+    @trigger_slope_positive.getter
+    def trigger_slope_positive(self):
+        _val = self.ask('SENS:EVEN{}:SLOP?'.format(self.channel)).strip()
+        _values={'POS':True, 'NEG':False}
+        return _values[_val]
     # convenience functions
     def interval_external_ttl(self):
         """ TODO """
@@ -603,14 +656,6 @@ class Agilent53131A(Instrument):
         self.init_continuous=False
         self.sense_common_mode=True
         self.trigger_auto_count_enable=False
-
-        self.interval_start_arm_source_external=True
-        self.interval_start_arm_slope_positive=True
-        self.interval_start_trig_source='immediate'
-
-        self.interval_stop_arm_source_external=True
-        self.interval_stop_arm_slope_positive=False
-        self.interval_stop_trig_source='immediate'
 
         self.channel=1
         self.trigger_relative_hysteresis=50
@@ -629,3 +674,5 @@ class Agilent53131A(Instrument):
         self.input_coupling='DC'
         self.trigger_level=2
         self.trigger_slope_positive=False
+
+        self.init
