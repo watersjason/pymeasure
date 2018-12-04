@@ -50,6 +50,7 @@ class Agilent53131A(Instrument):
         TODO
 
     """
+    # property that sets channel used for channel-specific commands
     __channel_list = (1,2)
     __channel = 1
     @property
@@ -100,7 +101,7 @@ class Agilent53131A(Instrument):
             The security state is toggled by an iterable with the elements:
             (``boolean``, ``security code``)."""
     )
-    # CONFigure subsystem - commands not implemented
+    # CONFigure subsystem - commands not implemented; use sense_function
     # DIAGnostic subsystem - commands not implemented
     # DISPlay subsystem
     display_enable = Instrument.control(
@@ -316,6 +317,48 @@ class Agilent53131A(Instrument):
     )
     # SENSe:EVENt3 subtree - commands not implemented
     # SENSe:FREQuency:ARM subtree
+    sense_function = Instrument.control(
+        "SENS:FUNC:ON?",
+        "SENS:FUNC:ON %s",
+        """ A string parameter for the device sense function. Values are:
+                ``'duty cycle'``, ``'fall time'``, ``'frequency'``,
+                ``'frequency 2'``, ``'frequency 3'``, ``'frequency ratio'``,
+                ``'frequency ratio 1,3'``, ``'frequency ratio 2,1'``,
+                ``'frequency ratio 3,1'``, ``'negative width'``, ``'period'``,
+                ``'period 2'``, ``'period 3'``, ``'phase'``, ``'phase 2'``,
+                ``'positive width'``, ``'time interval'``, ``'totalize'``,
+                ``'rise time'``, ``'voltage max'``, ``'voltage max 2'``,
+                ``'voltage min'``, ``'voltage min 2'``: ``'voltage range'``,
+                ``'voltage range 2'``. """,
+        validator=strict_discrete_set,
+        values={'duty cycle':          '"DCTC"',
+                'fall time':           '"FTIM"',
+                'frequency':           '"FREQ"',
+                'frequency 2':         '"FREQ 2"',
+                'frequency 3':         '"FREQ 3"',
+                'frequency ratio':     '"FREQ:RAT"',
+                'frequency ratio 1,3': '"FREQ:RAT 1,3"',
+                'frequency ratio 2,1': '"FREQ:RAT 2,1"',
+                'frequency ratio 3,1': '"FREQ:RAT 3,1"',
+                'negative width':      '"NWID"',
+                'period':              '"PER"',
+                'period 2':            '"PER 2"',
+                'period 3':            '"PER 3"',
+                'phase':               '"PHAS"',
+                'phase 2':             '"PHAS 2"',
+                'positive width':      '"PWID"',
+                'time interval':       '"TINT"',
+                'totalize':            '"TOT"',
+                'rise time':           '"RTIM"',
+                'voltage max':         '"VOLT:MAX"',
+                'voltage max 2':       '"VOLT:MAX 2"'
+                'voltage min':         '"VOLT:MIN"'
+                'voltage min 2':       '"VOLT:MIN 2"'
+                'voltage range':       '"VOLT:PTP"'
+                'voltage range 2':     '"VOLT:PTP 2"'
+ }
+        map_values=True
+    )
     # SENSe:PHASe:ARM subtree - commands not implemented
     # SENSe:ROSCillator subtree
     reference_external_check = Instrument.control(
@@ -366,7 +409,7 @@ class Agilent53131A(Instrument):
         values=(True,False)
     )
     # SENSe:TINTerval subtree - commands partially supported
-    interval_start_trig_slope_positive = Instrument.control(
+    interval_start_arm_slope_positive = Instrument.control(
         "SENS:TINT:ARM:ESTART:LAY2:SLOP?",
         "SENS:TINT:ARM:ESTART:LAY2:SLOP %s",
         """ A boolean parameter that sets the time interval measurement start
@@ -377,7 +420,7 @@ class Agilent53131A(Instrument):
                 False:  'NEG'},
         map_values=True
     )
-    interval_start_trig_source_external = Instrument.control(
+    interval_start_arm_source_external = Instrument.control(
         "SENS:TINT:ARM:ESTART:LAY2:SOUR?",
         "SENS:TINT:ARM:ESTART:LAY2:SOUR %s",
         """ A boolean parameter that sets the signal for the time measurement
@@ -389,7 +432,7 @@ class Agilent53131A(Instrument):
                 False:  'IMM'},
         map_values=True
     )
-    interval_start_arm_count = Instrument.control(
+    interval_start_trig_count = Instrument.control(
         "SENS:TINT:ARM:ESTART:LAY1:ECO?",
         "SENS:TINT:ARM:ESTART:LAT1:ECO %i",
         """ An integer parameter for the number of events used to delay the
@@ -398,7 +441,7 @@ class Agilent53131A(Instrument):
         values=range(1,99999999,1),
         cast=int
     )
-    interval_start_arm_source = Instrument.control(
+    interval_start_trig_source = Instrument.control(
         "SENS:TINT:ARM:ESTART:LAY1:SOUR?",
         "SENS:TINT:ARM:ESTART:LAY1:SOUR %s",
         """ A string parameter for the arm start signal source.
@@ -417,7 +460,7 @@ class Agilent53131A(Instrument):
                 'internal':     'INT'},
         map_values=True
     )
-    interval_start_arm_delay = Instrument.control(
+    interval_start_trig_delay = Instrument.control(
         "SENS:TINT:ARM:ESTART:LAY1:TIM?",
         "SENS:TINT:ARM:ESTART:LAY1:TIM %s",
         """ A float parameter for the time delay value used for the start arm
@@ -426,7 +469,7 @@ class Agilent53131A(Instrument):
         validator=discreteTruncate,
         values=range(100e-9,0.9999999,100e-9)
     )
-    interval_stop_trig_slope_positive = Instrument.control(
+    interval_stop_arm_slope_positive = Instrument.control(
         "SENS:TINT:ARM:ESTOP:LAY2:SLOP?",
         "SENS:TINT:ARM:ESTOP:LAY2:SLOP %s",
         """ A boolean parameter that sets the time interval measurement
@@ -437,7 +480,7 @@ class Agilent53131A(Instrument):
                 False:  'NEG'},
         map_values=True
     )
-    interval_stop_trig_source_external = Instrument.control(
+    interval_stop_arm_source_external = Instrument.control(
         "SENS:TINT:ARM:ESTOP:LAY2:SOUR?",
         "SENS:TINT:ARM:ESTOP:LAY2:SOUR %s",
         """ A boolean parameter that sets the signal for the time measurement
@@ -449,7 +492,7 @@ class Agilent53131A(Instrument):
                 False:  'IMM'},
         map_values=True
     )
-    interval_stop_arm_count = Instrument.control(
+    interval_stop_trig_count = Instrument.control(
         "SENS:TINT:ARM:ESTOP:LAY1:ECO?",
         "SENS:TINT:ARM:ESTOP:LAT1:ECO %i",
         """ An integer parameter for the number of events used to delay the
@@ -458,7 +501,7 @@ class Agilent53131A(Instrument):
         values=range(1,99999999,1),
         cast=int
     )
-    interval_stop_arm_source = Instrument.control(
+    interval_stop_trig_source = Instrument.control(
         "SENS:TINT:ARM:ESTOP:LAY1:SOUR?",
         "SENS:TINT:ARM:ESTOP:LAY1:SOUR %s",
         """ A string parameter for the arm stop signal source.
@@ -477,7 +520,7 @@ class Agilent53131A(Instrument):
                 'internal':     'INT'},
         map_values=True
     )
-    interval_stop_arm_delay = Instrument.control(
+    interval_stop_trig_delay = Instrument.control(
         "SENS:TINT:ARM:ESTOP:LAY1:TIM?",
         "SENS:TINT:ARM:ESTOP:LAY1:TIM %s",
         """ A float parameter for the time delay value used for the stop arm
@@ -512,44 +555,25 @@ class Agilent53131A(Instrument):
         validator=strict_discrete_set,
         values=(True,False)
     )
+
     def __init__(self, adapter, **kwargs):
         super(Agilent53131A, self).__init__(adapter,
               "Agilent 53131A Universal Counter", **kwargs)
-
         self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
-
+        self.format_data='ascii'
+    # SCPI subsystem
     @property
     def abort(self):
         """ A property that causes the device to abort any measurements in
             progress. The command processes as quickly as possible."""
         self.write("ABORT")
+    # INITiate subsystem
     @property
     def init(self):
         """ The device immediately initiates a single measurement or a block of
             measurements. """ # TODO add details on single vs block
         self.write("INIT:IMM")
-    def time_interval_config(self,
-                             channel_1_trigger_level,
-                             channel_2_trigger_level,
-                             channel_1_slope='positive',
-                             channel_2_slope='negative',
-                             channel_mode='common',
-                             impedance=1e6,
-                             couple='DC',
-                             measure_continuous=True):
-        """ TODO """
-        self.measure_continuous=measure_continuous
-        self.measure_function='time_interval'
-        self.channel_mode=channel_mode
-        self.channel_1_impedance=impedance
-        self.channel_2_impedance=impedance
-        self.channel_1_couple=couple
-        self.channel_2_couple=couple
-        self.channel_1_trigger_level=channel_1_trigger_level
-        self.channel_2_trigger_level=channel_2_trigger_level
-        self.channel_1_trigger_slope=channel_1_slope
-        self.channel_2_trigger_slope=channel_2_slope
-    #
+    # CALibration subsystem
 #    @calibration_data.getter
 #    def calibration_data(self):
 #        return self.adapter.ask_values("CAL:DATA?")
@@ -563,8 +587,45 @@ class Agilent53131A(Instrument):
         strict_discrete_set(state,(0,1))
         strict_range(code,(0,9999999))
         self.write("CAL:SEC:STAT {}, {}".format(state,code))
-    #
+    # DISPlay subsystem
     @display_menu_enable.setter
     def display_menu_enable(self,value):
         if value == 0:
             self.write("DISP:MENU:STAT OFF")
+    # convenience functions
+    def interval_external_ttl(self):
+        """ TODO """
+        self.sense_function='time interval'
+        self.reference_source_auto=False
+        self.reference_source_external=True
+        self.reference_external_check='ON'
+        #self.measure_function='interval'
+        self.init_continuous=False
+        self.sense_common_mode=True
+        self.trigger_auto_count_enable=False
+
+        self.interval_start_arm_source_external=True
+        self.interval_start_arm_slope_positive=True
+        self.interval_start_trig_source='immediate'
+
+        self.interval_stop_arm_source_external=True
+        self.interval_stop_arm_slope_positive=False
+        self.interval_stop_trig_source='immediate'
+
+        self.channel=1
+        self.trigger_relative_hysteresis=50
+        self.trigger_auto_enable=False
+        self.trigger_auto_level=False
+        self.input_impedance=1e6
+        self.input_coupling='DC'
+        self.trigger_level=4
+        self.trigger_slope_positive=True
+
+        self.channel=2
+        self.trigger_relative_hysteresis=50
+        self.trigger_auto_enable=False
+        self.trigger_auto_level=False
+        self.input_impedance=1e6
+        self.input_coupling='DC'
+        self.trigger_level=2
+        self.trigger_slope_positive=False
