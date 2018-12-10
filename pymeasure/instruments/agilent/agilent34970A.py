@@ -43,52 +43,189 @@ class Agilent34970A(Instrument):
         TODO
 
     """
-    # MEASure
-    # TODO
-    # ROUTe:MONitor
-    monitor_channel = Instrument.control(
-        "ROUT:MON?",
-        "ROUT:MON %s",
-        """ TODO """
-    )
-    monitor_state = Instrument.control(
-        "ROUT:MON:STAT?",
-        "ROUT:MON:STAT %s",
-        """ TODO """,
-        validator=strict_discrete_set,
-        values=('OFF','ON')
-    )
-    monitor_data = Instrument.measurement(
-        "ROUT:DATA?",
-        """ TODO """
-    )
-    # ROUTe:SCAN
-    scan_list = Instrument.control(
-        "ROUT:SCAN?",
-        "ROUT:SCAN %s",
-        """ TODO """
-    )
-    scan_list_size = Instrument.measurement(
-        "ROUT:SCAN:SIZE?",
-        """ TODO """
-    )
-    # ROUTe:CHANnel:DELay
-    monitor_channel_delay_value = Instrument.control() # TODO
-    monitor_channel_delay_auto = Instrument.control() # TODO
+    # Channel list
+    __channel_list = []
+    @property
+    def channel_list(self):
+        """ A list property specifying the channels that a command is applied.
+            Individual channels are of the form: ``scc``, where ``s`` is the
+            card slot number (1, 2, 3) and ``cc`` is the channel number on the
+            specified card.
+        """
+        return self.__channel_list
+    @channel_list.setter
+    def channel_list(self, channels):
+        self.__channels = channels
+
     # CALCulate
-    math_average
-    math_minimum
-    math_maximum
-    math_minimum_time
-    math_maximum_time
-    math_range
-    math_count
-    math_clear
+    math_average = Instrument.measurement(
+        "CALC:AVER:AVER?",
+        """ Returns a float value of the calculated
+            average value of the math register. """
+    ) #TODO link to channel list
+    math_minimum = Instrument.measurement(
+        "CALC:AVER:MIN?",
+        """ Returns a float value of the calculated
+            minimum value of the math register. """
+    ) #TODO link to channel list
+    math_maximum = Instrument.measurement(
+        "CALC:AVER:MAX?",
+        """ Returns a float value of the calculated
+            maximum value of the math register. """
+    ) #TODO link to channel list
+    math_minimum_time = Instrument.measurement(
+        "CALC:AVER:MIN:TIME?",
+        """ TODO """
+    ) #TODO link to channel list
+    math_maximum_time = Instrument.measurement(
+        "CALC:AVER:MAX:TIME?",
+        """ TODO """
+    ) #TODO link to channel list
+    math_range = Instrument.measurement(
+        "CALC:AVER:PTP?",
+        """ Returns a float value of the calculated
+            peak to peak range of the math register.  """
+    ) #TODO link to channel list
+    math_count = Instrument.measurement(
+        "CALC:AVER:COUN?",
+        """ Returns a float value of the total number
+            of data points in the math register.  """
+    ) #TODO link to channel list
     # DATA
     data_last = Instrument.measurement(
         "DATA:LAST?",
         """ TODO """
-        get_process=lambda v:v.split(',')
+    )
+    # FORMat
+    read_alarm_enable = Instrument.control(
+        "FORM:READ:ALAR?",
+        "FORM:READ:ALAR %s",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={True:'ON',
+                False:'OFF'},
+        map_values=True,
+        cast=bool
+    )
+    read_channel_enable = Instrument.control(
+        "FORM:READ:CHAN?",
+        "FORM:READ:CHAN %s",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={True:'ON',
+                False:'OFF'},
+        map_values=True,
+        cast=bool
+    )
+    read_time_enable = Instrument.control(
+        "FORM:READ:TIME?",
+        "FORM:READ:TIME %s",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={True:'ON',
+                False:'OFF'},
+        map_values=True,
+        cast=bool
+    )
+    read_unit_enable = Instrument.control(
+        "FORM:READ:UNIT?",
+        "FORM:READ:UNIT %s",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={True:'ON',
+                False:'OFF'},
+        map_values=True,
+        cast=bool
+    )
+    read_time_relative = Instrument.control(
+        "FORM:READ:TIME:TYPE?",
+        "FORM:READ:TIME:TYPE %s",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={True:'REL',
+                False:'ABS'},
+        map_values=True,
+        cast=bool
+    )
+    # INSTrument
+    dmm_installed = Instrument.measurement(
+        "INST:DMM:INST?",
+        """ A boolean property for the physically installed DMM. """,
+        cast=bool
+    )
+    dmm_enable = Instrument.control(
+        "INST:DMM?",
+        "INST:DMM %s",
+        """ A boolean property for the enabled state of the internal DMM. """,
+        validator=strict_discrete_set,
+        values={True:'ON',
+                False:'OFF'},
+        map_values=True,
+        cast=bool
+    )
+    # MEASure
+    # TODO
+    # ROUTe
+    remote_channel = Instrument.control(
+        "ROUT:MON?",
+        "ROUT:MON %s",
+        """ An integer parameter that sets the remote channel. """,
+        set_process=lambda v: '(@'+str(v)+')',
+        get_process=lambda v: int(v.strip(')').split('@')[-1])
+    )
+    remote_enable = Instrument.control(
+        "ROUT:MON:STAT?",
+        "ROUT:MON:STAT %s",
+        """ A boolean parameter that enables the remote interface. """,
+        validator=strict_discrete_set,
+        values={False:'OFF',
+                True:'ON'},
+        map_values=True,
+        cast=bool
+    )
+    remote_data = Instrument.measurement(
+        "ROUT:DATA?",
+        """ Read data from the channel selected by
+            :attr:`~.Agilent34970A.remote_channel`. """
+    )
+    scan = Instrument.control(
+        "ROUT:SCAN?",
+        "ROUT:SCAN %s",
+        """ TODO """
+    ) # TODO link to scan list
+    scan_list_size = Instrument.measurement(
+        "ROUT:SCAN:SIZE?",
+        """ TODO """
+    )
+    remote_channel_delay = Instrument.control(
+        "ROUT:CHAN:DEL?",
+        "ROUT:CHAN:DEL %g",
+        """ TODO """
+    ) # TODO link to channel list
+    remote_channel_delay_auto = Instrument.control(
+        "ROUT:CHAN:DEL:AUTO?",
+        "ROUT:CHAN:CEL:AUTO %s",
+        """ TODO """
+    ) # TODO link to channel list
+    remote_channel_source = Instrument.control(
+        "ROUT:CHAN:ADV:SOUR?",
+        "ROUT:CHAN:ADV:SOUR %s",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={'external':'EXT',
+                'bus':'BUS',
+                'immediate':'IMM'},
+        map_values=True
+    )
+    remote_channel_4_wire = Instrument.control(
+        "ROUT:CHAN:FWIR?",
+        "ROUT:CHAN:FWIR %i",
+        """ TODO """,
+        validator=strict_discrete_set,
+        values={True,'ON',
+                False,'OFF'},
+        map_values=True,
+        cast=bool
     )
     # TRIGger
     trigger_source = Instrument.control(
@@ -120,3 +257,25 @@ class Agilent34970A(Instrument):
         validator=joined_validators(truncated_range,strict_discrete_set),
         values=[[1,50000],['MIN','MAX','INF']]
     )
+
+    def __init__(self, adapter, **kwargs):
+        super(Agilent34970A, self).__init__(adapter,
+              "Agilent 34970A DAQ/Switch Unit", **kwargs)
+    @property
+    def abort(self):
+        """ TODO """
+        self.write('ABOR')
+    @property
+    def init(self):
+        """ TODO """
+        self.write('INIT')
+    # CALCulate
+    @property
+    def math_clear(self):
+        """ Clear all data in the math register. """
+        self.write('CALC:AVER:CLE')  # TODO channel list
+    @property
+    def null_channel(self):
+        """ Make a null measurement and apply it as
+            an offset to the current channel. """,
+        self.write('CALC:SCAL:OFFSET:NULL') # TODO channel list
