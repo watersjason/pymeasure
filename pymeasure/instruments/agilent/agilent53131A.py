@@ -36,19 +36,23 @@ from numpy import arange
 
 class Agilent53131A(Instrument):
     """
-    Represent the 2 channel HP/Agilent 53131A 225 MHz universal counter.
+    Represent the HP/Agilent 53131A 225 MHz universal counter. Channel specific
+    commands use the value set by the property :attr:`~.Agilent53131A.channel`.
 
-    Does not contain full suite of device commands.
+    Does not support full suite of device commands.
 
     .. code-block:: python
 
-        # Esablish the Agilent 53131A counter device
-        counter = Agilent53131A("GPIB::1::INSTR")
+        counter = Agilent53131A(
+                    "GPIB::1::INSTR")   # Esablish device communication
 
-        # Run the self calibtration
-        counter.device_calibrate
+        counter.device_calibrate        # Run the self calibtration
 
-        TODO
+        counter.channel                 # Read the current channel
+        counter.input_impedance = 50    # Channel 1 input impedance to 50 Ohm
+
+        counter.channel=2               # Change the channel to 2
+        counter.input_impedance = 50    # Channel 2 input impedance to 50 Ohm
 
     """
     # property that sets channel used for channel-specific commands
@@ -547,7 +551,7 @@ class Agilent53131A(Instrument):
     @property
     def init(self):
         """ The device immediately initiates a single measurement or a block of
-            measurements. """ # TODO add details on single vs block
+            measurements. """
         self.write("INIT:IMM")
     # CALibration subsystem
 #    @calibration_data.getter
@@ -647,7 +651,10 @@ class Agilent53131A(Instrument):
         return _values[_val]
     # convenience functions
     def interval_external_ttl(self):
-        """ TODO """
+        """ Configure the time interval measurement for a 5V TTL signal input on
+            channel 1. The interval measurement triggers when the voltage of
+            the input signal reaches 4V and terminates when the signal voltage
+            drops below 2V. """
         self.sense_function='time interval'
         self.reference_source_auto=False
         self.reference_source_external=True
