@@ -44,18 +44,18 @@ class Agilent34970A(Instrument):
 
     """
     # Channel list
-    __channel_list = []
+    _channel = []
     @property
-    def channel_list(self):
+    def channel(self):
         """ A list property specifying the channels that a command is applied.
             Individual channels are of the form: ``scc``, where ``s`` is the
             card slot number (1, 2, 3) and ``cc`` is the channel number on the
             specified card.
         """
-        return self.__channel_list
-    @channel_list.setter
-    def channel_list(self, channels):
-        self.__channels = channels
+        return _channel
+    @channel.setter
+    def channel(self, channel):
+        _channel = channel
 
     # CALCulate
     math_average = Instrument.measurement(
@@ -91,11 +91,13 @@ class Agilent34970A(Instrument):
         """ Returns a float value of the total number
             of data points in the math register.  """
     ) #TODO link to channel list
+
     # DATA
     data_last = Instrument.measurement(
         "DATA:LAST?",
         """ TODO """
     )
+
     # FORMat
     read_alarm_enable = Instrument.control(
         "FORM:READ:ALAR?",
@@ -147,6 +149,7 @@ class Agilent34970A(Instrument):
         map_values=True,
         cast=bool
     )
+
     # INSTrument
     dmm_installed = Instrument.measurement(
         "INST:DMM:INST?",
@@ -163,8 +166,13 @@ class Agilent34970A(Instrument):
         map_values=True,
         cast=bool
     )
+
     # MEASure
-    # TODO
+
+    #MEMory
+
+    # MMEMory
+
     # ROUTe
     remote_channel = Instrument.control(
         "ROUT:MON?",
@@ -227,7 +235,139 @@ class Agilent34970A(Instrument):
         map_values=True,
         cast=bool
     )
-    # TRIGger
+
+    # SENSe subsystem commands
+
+    # SOURce subsystem commands
+    source_dio_word = Instrument.control(
+        "SOUR:DIG:DATA:WORD? (@{})".format(channel_digital),
+        "SOUR:DIG:DATA:WORD %s,(@{})".format(channel_digital),
+        """ An integer parameter representing the 16 bit word that is output
+            on `channel_digital`. """
+    )
+    source_dio_byte = Instrument.control(
+        "SOUR:DIG:DATA:BYTE? (@{})".format(channel_digital),
+        "SOUR:DIG:DATA:BYTE %g,(@{})".format(channel_digital),
+        """ An integer parameter representing the 8 bit byte that is output
+            on `channel_digital`. """
+    )
+    source_dio_state = Instrument.measurement(
+        "SOUR:DIG:STAT? (@{})".format(channel_digital),
+        """ Returns the status (input or output) of the digital channels
+            specified by `channel_digital`. """
+    )
+    source_dac_voltage = Instrument.control(
+        "SOUR:VOLT? (@{})".format(channel_digital),
+        "SOUR:VOLT %g,(@{})".format(channel_digital),
+        """ A float parameter for the output voltage level on the DAC
+            specified by `channel_digital`. Each DAC channel is capable of
+            outputting -12 V to +12 V (resolution 1 mV) at 10 mA max. """,
+        validator = truncated_range,
+        values = (-12, 12)
+    )
+
+    # STATus subsystem commands
+    # TODO: Subsystem replies are a string of length 16. Convert reply string
+    #       to a list of integers. Use the list to index the bit definitions.
+
+    # SYSTem subsystem commands
+    system_alarm = Instrument.measurement(
+        "SYST:ALAR?",
+        """ Read the alarm data from the alarm queue. Returns a dictionary with
+            the keys: `reading`, `yyyy`(year), `mm`(month), `dd`(day),
+            `hh`(hour), `mm`(minute), `ss`(second),
+            `channel number`(3 digit int), `alarm threshold`(int; 0:no alarm,
+            1: LO, 2: HI), and `alarm number`(int, range:1-4). """,
+        get_process=lambda v:dict(zip(('reading','yyyy','mm','dd','hh','mm',
+                                       'ss','channel number','alarm threshold',
+                                       'alarm number'), v.split(',')))
+    )
+    card_reset = Instrument.setting(
+        "SYST:CPON %s",
+        """ Resets the module in the specified slot to its power-on state.
+            See manual for Factory Reset State for a complete listing of
+            the instrument's Factory configuration. """,
+        validator=strict_discrete_set,
+        values=(100,200,300,'ALL')
+    )
+    card_id = Instrument.measurement(
+        "SYST:CTYP? %s" % self._channel,
+        """ Get the card ID for `channel`. """,
+        get_process = lambda v: dict(zip(('manufacturer', 'card model number',
+                                          'card serial number',
+                                          'firmware revision'), v.split(',')))
+    )
+    system_date = Instrument.control(
+        "SYST:DATE?",
+        "SYST:DATE %s",
+        """ A numeric list for the date with the format: `(yyyy, mm, dd)`. """
+    )
+    system_error = Instrument.measurement(
+        "SYST:ERR?",
+        """ Query, read and remove one error from the error queue. Errors are
+            queried using the first-in-first-out protocol. """
+    )
+    system_remote_interface = Instrument.control(
+        "SYST:INT?",
+        "SYST:INT %s",
+        """ A string parameter for the device remote interface protocol. """,
+        validator = strict_discrete_set,
+        values = ('GPIB','RS232')
+    )
+    system_command_set = Instrument.control(
+        "SYST:LANG?",
+        "SYST:LANG %s",
+        """ A string parameter that specifies whether the instrument behaves as
+            a `34970A` or `34972A`. """,
+        validator = strict_discrete_set,
+        values = ('34970A', '34972A')
+    )
+    system_line_frequency = Instrument.measurement(
+        "SYST:LFR?",
+        """ Query the current power-line reference frequency used by the
+            device. This value is used to determine the integration time. """
+    )
+    system_control_mode = Instrument.setting(
+        "SYST:%s",
+        """ A string parameter that puts the device in local mode (`local`),
+            remote mode (`remote`), or local-lockout mode (`lockout`) """,
+        validator = strict_discrete_set,
+        values = {'local':  'LOC',
+                  'remote': 'REM',
+                  'lockout':'RWL'},
+        set_process = lambda v: v.casefold()
+    )
+    # skip lock commands
+    system_preset = Instrument.setting(
+        "SYST:PRES",
+        """ Put the device in preset configuration. """
+    )
+    # skip security command
+    system_time = Instrument.control(
+        "SYST:TIME?",
+        "SYST:TIME %s",
+        """ A numeric list for the device time stamp. The list values are:
+            (`hh`, `mm`, `ss.sss`). """
+    )
+    scan_time = Instrument.measurement(
+        "SYST:TIME:SCAN?",
+        """ Returns a numeric list representing the time at the start of a
+            measurement scan. The list format is (`yyyy`, `mm`, `dd`, `hh`,
+            `mm`, `ss.sss`). """
+    )
+    system_version = Instrument.measurement(
+        "SYST:VERS?",
+        """ Returns a string with the version of the device SCPI standard. """
+    )
+
+    # TRIGger subsystem commands
+    trigger_count = Instrument.control(
+        "TRIG:COUN?",
+        "TRIG:COUNT %s",
+        """ TODO """,
+        validator=joined_validators(truncated_range,strict_discrete_set),
+        values=[[1,50000],['MIN','MAX','INF']]
+    )
     trigger_source = Instrument.control(
         "TRIG:SOUR?",
         "TRIG:SOUR %s",
@@ -250,13 +390,6 @@ class Agilent34970A(Instrument):
         validator=joined_validators(truncated_range,strict_discrete_set),
         values=[[0,3600],['MIN','MAX']]
     ) # TODO check numeric range of validator values
-    trigger_count = Instrument.control(
-        "TRIG:COUN?",
-        "TRIG:COUNT %s",
-        """ TODO """,
-        validator=joined_validators(truncated_range,strict_discrete_set),
-        values=[[1,50000],['MIN','MAX','INF']]
-    )
 
     def __init__(self, adapter, **kwargs):
         super(Agilent34970A, self).__init__(adapter,
