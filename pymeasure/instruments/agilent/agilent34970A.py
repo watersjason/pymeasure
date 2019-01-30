@@ -44,7 +44,7 @@ class Agilent34970A(Instrument):
 
     """
     # Channel list
-    _channel = []
+    _channel = ''
     @property
     def channel(self):
         """ A list property specifying the channels that a command is applied.
@@ -56,6 +56,13 @@ class Agilent34970A(Instrument):
     @channel.setter
     def channel(self, channel):
         _channel = channel
+    _channel_digital = ''
+    @property
+    def channel_digital(self):
+        return _channel_digital
+    @channel_digital.setter
+    def channel_digital(self, channel):
+        _channel_digital = channel
 
     # CALCulate
     math_average = Instrument.measurement(
@@ -92,11 +99,71 @@ class Agilent34970A(Instrument):
             of data points in the math register.  """
     ) #TODO link to channel list
 
-    # DATA
-    data_last = Instrument.measurement(
-        "DATA:LAST?",
-        """ TODO """
+    # CALibration subsystem commands
+    calibration = Instrument.measurement(
+        "CAL?",
+        """ Perform an internal calibration of the DMM. Returns `True` if
+            calibration succeeds. """,
+        validator = strict_discrete_set,
+        values = {True:0, False:1},
+        map_values = True
     )
+    calibration_count = Instrument.measurement(
+        "CAL:COUN?",
+        """ A float property for the number
+            of times the device was calibrated. """
+    )
+    calibration_security_code = Instrument.setting(
+        "CAL:SEC:CODE %s",
+        """ Takes a string of up to 12 characters and sets
+            a new calibration security code. The first
+            characeter must be a letter (A-Z). Remaining characters
+            can be letters, numbers (0-9), or the underscore (_). """
+    )
+    calibration_string = Instrument.control(
+        "CAL:STR?",
+        "CAL:STR %s",
+        """ A string property. Read or set the calibration string. """
+    )
+    calibration_value = Instrument.control(
+        "CAL:VAL?",
+        "CAL:VAL %g",
+        """ A float parameter for the value of the calibration
+            signal used in the internal DMM calibration. """
+    )
+
+    # CONFigure subsystem commands
+    configure_get = Instrument.measurement(
+        "CONF? (@{})".format(channel),
+        """ Returns the present measurement configuration for `channel`. """
+    )
+    # TODO complete
+
+    # DATA subsystem commands
+    data_last = Instrument.measurement(
+        "DATA:LAST? 1,(@{})".format(channel),
+        """ Returns the most recent reading on `channel`. """
+    )
+    data_length = Instrument.measurement(
+        "DATA:POIN?",
+        """ A float parameter for the total number
+            of readings stored in reading memory. """
+    )
+    data_length_threshold = Instrument.control(
+        "DATA:POIN:EVEN:THR?",
+        "DATA:POIN:EVEN:THR %g",
+        """ An integer parameter for the number of readings that must be
+            collected to set the Standard Operation Register group event. """,
+        validator = truncated_range,
+        values = (1,50000),
+        cast = int
+    )
+
+    # DIAGnostic subsystem commands
+    # Commands not implemented
+
+    # DISPlay subsystem commands
+    # Commands not implemented
 
     # FORMat
     read_alarm_enable = Instrument.control(
@@ -150,7 +217,10 @@ class Agilent34970A(Instrument):
         cast=bool
     )
 
-    # INSTrument
+    # IEEE-488 commands
+    # TODO
+
+    # INSTrument subsystem commands
     dmm_installed = Instrument.measurement(
         "INST:DMM:INST?",
         """ A boolean property for the physically installed DMM. """,
@@ -167,11 +237,17 @@ class Agilent34970A(Instrument):
         cast=bool
     )
 
-    # MEASure
+    # LXI subsystem commands
+    # Commands not implemented
 
-    #MEMory
+    # MEASure subsystem commands
+    # Commands not implemented. Use CONFigure and IEEE-488 susbsystem commands.
+
+    # MEMory
+    # TODO
 
     # MMEMory
+    # TODO
 
     # ROUTe
     remote_channel = Instrument.control(
@@ -402,6 +478,7 @@ class Agilent34970A(Instrument):
     def init(self):
         """ TODO """
         self.write('INIT')
+
     # CALCulate
     @property
     def math_clear(self):
@@ -412,3 +489,22 @@ class Agilent34970A(Instrument):
         """ Make a null measurement and apply it as
             an offset to the current channel. """,
         self.write('CALC:SCAL:OFFSET:NULL') # TODO channel list
+
+    # CALibration
+    def calibration_secure(self):
+        """ Unsecures or secures the instrument for calibration. This feature
+            requires you to provide a security code to prevent accidental or
+            unauthorized calibrations of the instrument.
+
+            Args
+            ----
+            state_code -    An iterable, of len 2. Element 1: the new security
+                            state (0, 1); element 2: the security code.
+            """
+        return self.query("CAL:SEC:STAT?")
+    @calibration_secure.setter
+    def calibration_secure(self,state_code):
+        if len(state_code) is not 2:
+            raise TypeError('The `state_code` must have a length of 2.')
+        self.write("CAL:SEC:STAT {},{}",format(state_code))
+    )
