@@ -44,9 +44,9 @@ class Agilent34970A(Instrument):
         TODO
 
     """
-    # Channel list
-    _channel_str = ''
-    _channel_digital_str = ''
+    # Channel list strings
+    _channel = '(@)'
+    _channel_digital = '(@)'
 
     # CALCulate
     math_average = Instrument.measurement(
@@ -288,11 +288,14 @@ class Agilent34970A(Instrument):
         """ Read data from the channel selected by
             :attr:`~.Agilent34970A.remote_channel`. """
     )
-    scan = Instrument.control(
+    channel_scan_list = Instrument.control(
         "ROUT:SCAN?",
         "ROUT:SCAN %s",
-        """ TODO """
-    ) # TODO link to scan list
+        """ An integer, float or list parameter for the
+            channels included in the device scan list. """
+        get_process=lambda v:[int(_i) for _i in v.strip('()@')],
+        set_process=lambda v:'@('+str([v]).strip('()[]')+')'
+    )
     scan_list_size = Instrument.measurement(
         "ROUT:SCAN:SIZE?",
         """ TODO """
@@ -329,6 +332,7 @@ class Agilent34970A(Instrument):
     )
 
     # SENSe subsystem commands
+    # Commands not implemented. Use CONFigure and IEEE-488 susbsystem commands.
 
     # SOURce subsystem commands
     source_dio_word = Instrument.control(
@@ -479,8 +483,8 @@ class Agilent34970A(Instrument):
     def __init__(self, adapter, **kwargs):
         super(Agilent34970A, self).__init__(adapter,
               "Agilent 34970A DAQ/Switch Unit", **kwargs)
-
         self.adapter.connection.timeout = 5000
+        self.write('ROUT:SCAN (@)')
 
     #
     @property
@@ -493,11 +497,10 @@ class Agilent34970A(Instrument):
     # Channel lists
     @property
     def channel(self):
-        """ A list property specifying the channels that a command is applied.
-            Individual channels are of the form: ``scc``, where ``s`` is the
-            card slot number (1, 2, 3) and ``cc`` is the channel number on the
-            specified card.
-        """
+        """ An integer, float, or list of int/float specifying the channels
+            that a command is applied. Individual channels are of the form:
+            `scc`, where `s` is the card slot number (1, 2, or 3) and `cc` is
+            the channel number on the specified card. """
         return [int(_i) for _i in self._channel.strip('()@')]
     @channel.setter
     def channel(self, channel):
@@ -512,15 +515,25 @@ class Agilent34970A(Instrument):
         else:
             raise TypeError('The `channel` must be an integer, float, or a '
                             'list of integers and floats.')
-
         self._channel = '(@' + _channel + ')'
-
     @property
     def channel_digital(self):
-        return self._channel_digital
+        """ TODO """
+        return [int(_i) for _i in self._channel_digital.strip('()@')]
     @channel_digital.setter
     def channel_digital(self, channel):
-        self._channel_digital = channel
+        if isinstance(channel, (int,float)):
+            _channel = str(channel)
+        elif isinstance(channel, list):
+            for _i in _channel:
+                if not isinstance(_i, (int, float)):
+                    raise TypeError('The elements in `channel` must be '
+                                    'integers or floats.')
+            _channel = str(channel).strip('()[]')
+        else:
+            raise TypeError('The `channel` must be an integer, float, or a '
+                            'list of integers and floats.')
+        self._channel_digital = '(@' + _channel + ')'
 
     #
     @property
