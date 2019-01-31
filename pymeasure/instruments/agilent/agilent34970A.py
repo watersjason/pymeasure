@@ -45,30 +45,8 @@ class Agilent34970A(Instrument):
 
     """
     # Channel list
-<<<<<<< HEAD
-    _channel = ''
-    @property
-    def channel(self):
-        """ A list property specifying the channels that a command is applied.
-            Individual channels are of the form: ``scc``, where ``s`` is the
-            card slot number (1, 2, 3) and ``cc`` is the channel number on the
-            specified card.
-        """
-        return self._channel
-    @channel.setter
-    def channel(self, channel):
-        self._channel = channel
-=======
     _channel_str = ''
-
->>>>>>> fbcf5753af6689d92b0abe4f3648e0111c5d199f
-    _channel_digital = ''
-    @property
-    def channel_digital(self):
-        return self._channel_digital
-    @channel_digital.setter
-    def channel_digital(self, channel):
-        self._channel_digital = channel
+    _channel_digital_str = ''
 
     # CALCulate
     math_average = Instrument.measurement(
@@ -501,15 +479,16 @@ class Agilent34970A(Instrument):
     def __init__(self, adapter, **kwargs):
         super(Agilent34970A, self).__init__(adapter,
               "Agilent 34970A DAQ/Switch Unit", **kwargs)
-<<<<<<< HEAD
+
         self.adapter.connection.timeout = 5000
+
+    #
     @property
     def timeout(self):
         return self.adapter.connection.timeout
     @timeout.setter
     def timeout(self, milliseconds):
         self.adapter.connection.timeout = milliseconds
-=======
 
     # Channel lists
     @property
@@ -519,23 +498,31 @@ class Agilent34970A(Instrument):
             card slot number (1, 2, 3) and ``cc`` is the channel number on the
             specified card.
         """
-        _channel = [int(_i) for _i in
-                    self._channel.strip('(').strip(')').strip('@')]
-        return _channel
+        return [int(_i) for _i in self._channel.strip('()@')]
     @channel.setter
     def channel(self, channel):
-         return '(@' + str(self._channel).replace('(','').replace(')','') + ')'
+        if isinstance(channel, (int, float)):
+            _channel = str(channel)
+        elif isinstance(_channel, list):
+            for _i in _channel:
+                if not isinstance(_i, (int, float)):
+                    raise TypeError('The elements in `channel` must be '
+                                    'integers or floats.')
+            _channel = str(channel).strip('()[]')
+        else:
+            raise TypeError('The `channel` must be an integer, float, or a '
+                            'list of integers and floats.')
+
+        self._channel = '(@' + _channel + ')'
+
     @property
-    def _channel(self):
-        """ A string property specifiying :attr:~`channel`
-             in the device channel list format. """
-        return self.channel_str
-    @_channel.setter
-    def _channel(self, channels):
-        pass #TODO
+    def channel_digital(self):
+        return self._channel_digital
+    @channel_digital.setter
+    def channel_digital(self, channel):
+        self._channel_digital = channel
 
     #
->>>>>>> fbcf5753af6689d92b0abe4f3648e0111c5d199f
     @property
     def abort(self):
         """ TODO """
@@ -575,7 +562,6 @@ class Agilent34970A(Instrument):
             raise TypeError('The `state_code` must have a length of 2.')
         self.write("CAL:SEC:STAT {},{}",format(state_code))
 
-<<<<<<< HEAD
     # SYSTem subsystem commands
     @property
     def card_id(self):
@@ -585,7 +571,7 @@ class Agilent34970A(Instrument):
         except ValueError:
             raise ValueError('Parameter `channel` must be 100, 200, or 300.')
         return self.ask('SYST:CTYP? {}'.format(self.channel)).strip('\n')
-=======
+
     # CONFigure subsystem commands
     @property
     def configure(self):
@@ -629,4 +615,3 @@ class Agilent34970A(Instrument):
     def wait_for_completion(self):
         """ Force the device to wait for all pending operations to complete. """
         self.write('*WAI')
->>>>>>> fbcf5753af6689d92b0abe4f3648e0111c5d199f
