@@ -121,7 +121,7 @@ class Agilent34970A(Instrument):
 
     # DATA subsystem commands
     data_last = Instrument.measurement(
-        "DATA:LAST? 1,(@{})".format(channel),
+        "DATA:LAST?",
         """ Returns the most recent reading on `channel`. """
     )
     data_length = Instrument.measurement(
@@ -222,16 +222,16 @@ class Agilent34970A(Instrument):
         "*PSC?",
         "*PSC %g",
         """ A boolean parameter for the state of the power-on status.
-            When `True`, the device registers are cleared on power-on. """
+            When `True`, the device registers are cleared on power-on. """,
         validator=strict_discrete_set,
-        values=(0,1)
+        values=(0,1),
         cast=bool
     )
     # skip *RCL and *SAV
     # skip *SRE and *STB?
     device_test = Instrument.measurement(
         "*TST?",
-        """ Run the device test. Returns `True` if 1 or more tests fail. """
+        """ Run the device test. Returns `True` if 1 or more tests fail. """,
         cast=bool
     )
 
@@ -292,8 +292,8 @@ class Agilent34970A(Instrument):
         "ROUT:SCAN?",
         "ROUT:SCAN %s",
         """ An integer, float or list parameter for the
-            channels included in the device scan list. """
-        get_process=lambda v:[int(_i) for _i in v.strip('()@')],
+            channels included in the device scan list. """,
+        get_process=lambda v:[_i for _i in v.strip('()@')],
         set_process=lambda v:'@('+str([v]).strip('()[]')+')'
     )
     scan_list_size = Instrument.measurement(
@@ -332,29 +332,145 @@ class Agilent34970A(Instrument):
     )
 
     # SENSe subsystem commands
-    # Commands not implemented. Use CONFigure and IEEE-488 susbsystem commands.
+    current_ac_bandwidth = Instrument.control(
+        "SENS:CURR:AC:BAND?",
+        "SENS:CURR:AC:BAND %g,{}".format(_channel),
+        """ A string parameter for the AC filter bandwidth speed.
+            Values for the bandwidth speed are: `slow`, `medium`, `fast`.
+
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values={'slow':3,'medium',20,'fast':200},
+        map_values=True
+    )
+    current_ac_range = Instrument.control(
+        "SENS:CURR:AC:RANG?",
+        "SEMS:CURR:AC:RANG %g",
+        """ A string (or list of string) parameters for the AC current range.
+            Values for the AC current range are: `min`, `med`, `max`.
+
+            Use with the 34901A multiplexer module (channels 21 & 22 only).
+
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values={'min':10e-3,'med':100e-3,'max':1},
+        map_values=True
+    )
+    current_ac_range_auto = Instrument.control(
+        "SENS:CURR:AC:RANG:AUTO?",
+        "SENS:CURR:AC:RANG:AUTO %i",
+        """ A boolean (or list of booleans) parameter to enable the AC current
+            auto range.
+
+            Use with the 34901A multiplexer module (channels 21 & 22 only).
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values=(True,False),
+        cast=bool
+    )
+    current_ac_resolution = Instruement.measurement(
+        "SENS:CURR:AC:RES?",
+        """ Returns a float (or list of floats) parameter for the AC current
+            resolution. Setting the resolution is not supported.
+
+            Use with the 34901A multiplexer module (channels 21 & 22 only).
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """
+    )
+
+    current_dc_aperature = Instrument.control(
+        "SENS:CURR:DC:APER?",
+        "SENS:CURR:DC:APER %g",
+        """ A float (or list of floats) parameter for the DC current aperature
+            integration time. Setting the aperature integration time is not
+            supported.
+
+            Use with the 34901A multiplexer module (channels 21 & 22 only).
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """
+    )
+    current_dc_nplc = Instrument.control(
+        "SENS:CURR:DC:NPLC?",
+        "SENS:CURR:DC:NPLC %g",
+        """ A float (or list of floats) parameter for the DC current
+            integration in number of power line cycles. Accepted values are
+            in the range: (0.02,0.2,1,2,10,20,100,200).
+
+            Use with the 34901A multiplexer module (channels 21 & 22 only).
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values=(0.02,0.2,1,2,10,20,100,200)
+    )
+    current_dc_range = Instrument.control(
+        "SENS:CURR:DC:RANG?",
+        "SENS:CURR:DC:RANG %g",
+        """ A string (or list of string) parameters for the DC current range.
+            Values for the AC current range are: `min`, `med`, `max`.
+
+            Use with the 34901A multiplexer module (channels 21 & 22 only).
+
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values={'min':10e-3,'med':100e-3,'max':1},
+        map_values=True
+    )
+    current_dc_range_auto = Instrument.control(
+        "SENS:CURR:DC:RANG:AUTO?",
+        "SENS:CURR:DC:RANG:AUTO %i",
+        """ A boolean (or list of booleans) parameter to enable the DC current
+            auto range.
+
+            Use with the 34901A multiplexer module (channels 21 & 22 only).
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values=(True,False),
+        cast=bool
+    )
+    current_dc_resolution = Instrument.measurement(
+        "SENS:CURR:DC:RES?",
+        """ Returns a float (or list of floats) parameter for the DC current
+            resolution. Setting the resolution is not supported.
+
+            Use with the 34901A multiplexer module (channels 21 & 22 only).
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """
+    )
+
+    # TODO continue with SENS
 
     # SOURce subsystem commands
     source_dio_word = Instrument.control(
-        "SOUR:DIG:DATA:WORD? (@{})".format(channel_digital),
-        "SOUR:DIG:DATA:WORD %s,(@{})".format(channel_digital),
+        "SOUR:DIG:DATA:WORD? (@{})".format(_channel_digital),
+        "SOUR:DIG:DATA:WORD %s,(@{})".format(_channel_digital),
         """ An integer parameter representing the 16 bit word that is output
             on `channel_digital`. """
     )
     source_dio_byte = Instrument.control(
-        "SOUR:DIG:DATA:BYTE? (@{})".format(channel_digital),
-        "SOUR:DIG:DATA:BYTE %g,(@{})".format(channel_digital),
+        "SOUR:DIG:DATA:BYTE? (@{})".format(_channel_digital),
+        "SOUR:DIG:DATA:BYTE %g,(@{})".format(_channel_digital),
         """ An integer parameter representing the 8 bit byte that is output
             on `channel_digital`. """
     )
     source_dio_state = Instrument.measurement(
-        "SOUR:DIG:STAT? (@{})".format(channel_digital),
+        "SOUR:DIG:STAT? (@{})".format(_channel_digital),
         """ Returns the status (input or output) of the digital channels
             specified by `channel_digital`. """
     )
     source_dac_voltage = Instrument.control(
-        "SOUR:VOLT? (@{})".format(channel_digital),
-        "SOUR:VOLT %g,(@{})".format(channel_digital),
+        "SOUR:VOLT? (@{})".format(_channel_digital),
+        "SOUR:VOLT %g,(@{})".format(_channel_digital),
         """ A float parameter for the output voltage level on the DAC
             specified by `channel_digital`. Each DAC channel is capable of
             outputting -12 V to +12 V (resolution 1 mV) at 10 mA max. """,
