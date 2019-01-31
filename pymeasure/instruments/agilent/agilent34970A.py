@@ -29,7 +29,8 @@ log.addHandler(logging.NullHandler())
 from pymeasure.instruments import Instrument
 from pymeasure.instruments.validators import (truncated_range,
                                               strict_discrete_set,
-                                              truncated_discrete_set)
+                                              truncated_discrete_set,
+                                              joined_validators)
 
 class Agilent34970A(Instrument):
     """
@@ -52,17 +53,17 @@ class Agilent34970A(Instrument):
             card slot number (1, 2, 3) and ``cc`` is the channel number on the
             specified card.
         """
-        return _channel
+        return self._channel
     @channel.setter
     def channel(self, channel):
-        _channel = channel
+        self._channel = channel
     _channel_digital = ''
     @property
     def channel_digital(self):
-        return _channel_digital
+        return self._channel_digital
     @channel_digital.setter
     def channel_digital(self, channel):
-        _channel_digital = channel
+        self._channel_digital = channel
 
     # CALCulate
     math_average = Instrument.measurement(
@@ -234,7 +235,8 @@ class Agilent34970A(Instrument):
         values={True:'ON',
                 False:'OFF'},
         map_values=True,
-        cast=bool
+        cast=bool,
+        set_process=lambda v: v.strip('\n')
     )
 
     # LXI subsystem commands
@@ -356,7 +358,7 @@ class Agilent34970A(Instrument):
             1: LO, 2: HI), and `alarm number`(int, range:1-4). """,
         get_process=lambda v:dict(zip(('reading','yyyy','mm','dd','hh','mm',
                                        'ss','channel number','alarm threshold',
-                                       'alarm number'), v.split(',')))
+                                       'alarm number'), v))
     )
     card_reset = Instrument.setting(
         "SYST:CPON %s",
@@ -365,13 +367,6 @@ class Agilent34970A(Instrument):
             the instrument's Factory configuration. """,
         validator=strict_discrete_set,
         values=(100,200,300,'ALL')
-    )
-    card_id = Instrument.measurement(
-        "SYST:CTYP? %s" % self._channel,
-        """ Get the card ID for `channel`. """,
-        get_process = lambda v: dict(zip(('manufacturer', 'card model number',
-                                          'card serial number',
-                                          'firmware revision'), v.split(',')))
     )
     system_date = Instrument.control(
         "SYST:DATE?",
@@ -470,6 +465,13 @@ class Agilent34970A(Instrument):
     def __init__(self, adapter, **kwargs):
         super(Agilent34970A, self).__init__(adapter,
               "Agilent 34970A DAQ/Switch Unit", **kwargs)
+        self.adapter.connection.timeout = 5000
+    @property
+    def timeout(self):
+        return self.adapter.connection.timeout
+    @timeout.setter
+    def timeout(self, milliseconds):
+        self.adapter.connection.timeout = milliseconds
     @property
     def abort(self):
         """ TODO """
@@ -491,6 +493,7 @@ class Agilent34970A(Instrument):
         self.write('CALC:SCAL:OFFSET:NULL') # TODO channel list
 
     # CALibration
+    @property
     def calibration_secure(self):
         """ Unsecures or secures the instrument for calibration. This feature
             requires you to provide a security code to prevent accidental or
@@ -507,4 +510,13 @@ class Agilent34970A(Instrument):
         if len(state_code) is not 2:
             raise TypeError('The `state_code` must have a length of 2.')
         self.write("CAL:SEC:STAT {},{}",format(state_code))
-    )
+
+    # SYSTem subsystem commands
+    @property
+    def card_id(self):
+        """ Get the card ID for `channel`. """
+        try:
+            strict_discrete_set(self.channel, (100,200,300))
+        except ValueError:
+            raise ValueError('Parameter `channel` must be 100, 200, or 300.')
+        return self.ask('SYST:CTYP? {}'.format(self.channel)).strip('\n')
