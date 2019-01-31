@@ -44,18 +44,8 @@ class Agilent34970A(Instrument):
 
     """
     # Channel list
-    _channel = ''
-    @property
-    def channel(self):
-        """ A list property specifying the channels that a command is applied.
-            Individual channels are of the form: ``scc``, where ``s`` is the
-            card slot number (1, 2, 3) and ``cc`` is the channel number on the
-            specified card.
-        """
-        return _channel
-    @channel.setter
-    def channel(self, channel):
-        _channel = channel
+    _channel_str = ''
+
     _channel_digital = ''
     @property
     def channel_digital(self):
@@ -133,11 +123,7 @@ class Agilent34970A(Instrument):
     )
 
     # CONFigure subsystem commands
-    configure_get = Instrument.measurement(
-        "CONF? (@{})".format(channel),
-        """ Returns the present measurement configuration for `channel`. """
-    )
-    # TODO complete
+    # See ...
 
     # DATA subsystem commands
     data_last = Instrument.measurement(
@@ -158,12 +144,27 @@ class Agilent34970A(Instrument):
         values = (1,50000),
         cast = int
     )
+    # skip DATA:REMOVE? command
 
     # DIAGnostic subsystem commands
-    # Commands not implemented
+    # Commands for this susbsystem are not implemented.
 
     # DISPlay subsystem commands
-    # Commands not implemented
+    display_enable = Instrument.control(
+        "DISP?",
+        "DISP %g",
+        """ A boolean parameter for the display state. When `True`,
+            the device front panel display is enabled. """,
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=bool
+    )
+    display_message = Instrument.control(
+        "DISP:TEXT?",
+        "DISP:TEXT %s",
+        """ Set or query the 12 character message displayed on the device
+            front panel display. The message is truncated at 12 characters. """
+    )
 
     # FORMat
     read_alarm_enable = Instrument.control(
@@ -218,7 +219,27 @@ class Agilent34970A(Instrument):
     )
 
     # IEEE-488 commands
-    # TODO
+    register_clear = Instrument.setting(
+        "*CLS",
+        """ Clear the event registers for all register groups. """
+    )
+    # skip *ESE/*ESE? and ESR?
+    power_on_state = Instrument.control(
+        "*PSC?",
+        "*PSC %g",
+        """ A boolean parameter for the state of the power-on status.
+            When `True`, the device registers are cleared on power-on. """
+        validator=strict_discrete_set,
+        values=(0,1)
+        cast=bool
+    )
+    # skip *RCL and *SAV
+    # skip *SRE and *STB?
+    device_test = Instrument.measurement(
+        "*TST?",
+        """ Run the device test. Returns `True` if 1 or more tests fail. """
+        cast=bool
+    )
 
     # INSTrument subsystem commands
     dmm_installed = Instrument.measurement(
@@ -470,6 +491,31 @@ class Agilent34970A(Instrument):
     def __init__(self, adapter, **kwargs):
         super(Agilent34970A, self).__init__(adapter,
               "Agilent 34970A DAQ/Switch Unit", **kwargs)
+
+    # Channel lists
+    @property
+    def channel(self):
+        """ A list property specifying the channels that a command is applied.
+            Individual channels are of the form: ``scc``, where ``s`` is the
+            card slot number (1, 2, 3) and ``cc`` is the channel number on the
+            specified card.
+        """
+        _channel = [int(_i) for _i in
+                    self._channel.strip('(').strip(')').strip('@')]
+        return _channel
+    @channel.setter
+    def channel(self, channel):
+         return '(@' + str(self._channel).replace('(','').replace(')','') + ')'
+    @property
+    def _channel(self):
+        """ A string property specifiying :attr:~`channel`
+             in the device channel list format. """
+        return self.channel_str
+    @_channel.setter
+    def _channel(self, channels):
+        pass #TODO
+
+    #
     @property
     def abort(self):
         """ TODO """
@@ -491,6 +537,7 @@ class Agilent34970A(Instrument):
         self.write('CALC:SCAL:OFFSET:NULL') # TODO channel list
 
     # CALibration
+    @property
     def calibration_secure(self):
         """ Unsecures or secures the instrument for calibration. This feature
             requires you to provide a security code to prevent accidental or
@@ -507,4 +554,47 @@ class Agilent34970A(Instrument):
         if len(state_code) is not 2:
             raise TypeError('The `state_code` must have a length of 2.')
         self.write("CAL:SEC:STAT {},{}",format(state_code))
-    )
+
+    # CONFigure subsystem commands
+    @property
+    def configure(self):
+        """ Returns the present measurement configuration for `channel`. """
+        _val = self.ask("CONF? (@{})".format(self.channel)).strip('\n')
+
+
+    # DISPlay subsystem commands
+    @property
+    def display_message_clear(self):
+        """ Clear the display message. """
+        self.write('DISP:TEXT:CLE')
+
+    # IEEE-488 commands
+    @property
+    def operation_complete(self):
+        """ Start the operation completion status engine. """
+        self.write('*OPC')
+    @property
+    def operation_status(self):
+        """ Query the operation completion status engine. Returns
+            `True` when the current operation is complete. """
+        _status = 0
+        _count = 0
+        while not _status:
+            try:
+                _status = int(self.query('*OPC'))
+            except VisaIOError:
+                if _count > 25:
+                    raise VisaIOError('Current operation was never completed.')
+    @property
+    def reset_to_factory_state(self):
+        """ Reset the device to the default factory configuration. """
+        self.write('*RST')
+    @property
+    def trigger(self):
+        """ Send the BUS trigger signal. Device must be pre-configured to
+            recieve the signal over the BUS by :attr:~`trigger_source`. """
+        self.write('*TRG')
+    @property
+    def wait_for_completion(self):
+        """ Force the device to wait for all pending operations to complete. """
+        self.write('*WAI')
