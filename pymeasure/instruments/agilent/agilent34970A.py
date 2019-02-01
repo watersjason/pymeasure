@@ -340,6 +340,8 @@ class Agilent34970A(Instrument):
         """ A string parameter for the AC filter bandwidth speed.
             Values for the bandwidth speed are: `slow`, `medium`, `fast`.
 
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
             The command is applied to the preset channel scan list; use
             :param:`~Agilent34970A.channel` to edit the channel list. """,
         validator=strict_discrete_set,
@@ -348,17 +350,17 @@ class Agilent34970A(Instrument):
     )
     current_ac_range = Instrument.control(
         "SENS:CURR:AC:RANG?",
-        "SEMS:CURR:AC:RANG %g",
-        """ A string (or list of string) parameters for the AC current range.
-            Values for the AC current range are: `min`, `med`, `max`.
+        "SENS:CURR:AC:RANG %g",
+        """ A float (or list of floats) parameters for the AC current range.
+            Input values are automatically rounded up to the nearest value in
+            the discrete set: (0.01, 0.1, 1) / Amp.
 
             Use with the 34901A multiplexer module (channels 21 & 22 only).
 
             The command is applied to the preset channel scan list; use
             :param:`~Agilent34970A.channel` to edit the channel list. """,
-        validator=strict_discrete_set,
-        values={'min':10e-3,'med':100e-3,'max':1},
-        map_values=True
+        validator=truncated_discrete_set,
+        values=(10e-3,100e-3,1)
     )
     current_ac_range_auto = Instrument.control(
         "SENS:CURR:AC:RANG:AUTO?",
@@ -384,46 +386,48 @@ class Agilent34970A(Instrument):
             Command is applied to the preset channel scan list; use
             :param:`~Agilent34970A.channel` to edit the channel list. """
     )
-
     current_dc_aperature = Instrument.control(
         "SENS:CURR:DC:APER?",
         "SENS:CURR:DC:APER %g",
         """ A float (or list of floats) parameter for the DC current aperature
-            integration time. Setting the aperature integration time is not
-            supported.
+            integration time. Values are automatically rounded up to the nearest
+            valid value in the range (0.0004, 1) second.
 
             Use with the 34901A multiplexer module (channels 21 & 22 only).
 
             Command is applied to the preset channel scan list; use
-            :param:`~Agilent34970A.channel` to edit the channel list. """
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = truncated_discrete_set,
+        values = [x / 1e6 for x in range(400, 1000004, 4)]
     )
     current_dc_nplc = Instrument.control(
         "SENS:CURR:DC:NPLC?",
         "SENS:CURR:DC:NPLC %g",
         """ A float (or list of floats) parameter for the DC current
-            integration in number of power line cycles. Accepted values are
-            in the range: (0.02,0.2,1,2,10,20,100,200).
+            integration in number of power line cycles. Input values are
+            automatically rounded up to the nearest value in the range:
+            (0.02,0.2,1,2,10,20,100,200).
 
             Use with the 34901A multiplexer module (channels 21 & 22 only).
 
             Command is applied to the preset channel scan list; use
             :param:`~Agilent34970A.channel` to edit the channel list. """,
-        validator=strict_discrete_set,
+        validator=truncated_discrete_set,
         values=(0.02,0.2,1,2,10,20,100,200)
     )
     current_dc_range = Instrument.control(
         "SENS:CURR:DC:RANG?",
         "SENS:CURR:DC:RANG %g",
-        """ A string (or list of string) parameters for the DC current range.
-            Values for the AC current range are: `min`, `med`, `max`.
+        """ A float (or list of floats) parameters for the DC current range.
+            Input values are automatically rounded up to the nearest value in
+            the discrete set: (0.01, 0.1, 1) / Amp.
 
             Use with the 34901A multiplexer module (channels 21 & 22 only).
 
             The command is applied to the preset channel scan list; use
             :param:`~Agilent34970A.channel` to edit the channel list. """,
-        validator=strict_discrete_set,
-        values={'min':10e-3,'med':100e-3,'max':1},
-        map_values=True
+        validator=truncated_discrete_set,
+        values=(10e-3,100e-3,1)
     )
     current_dc_range_auto = Instrument.control(
         "SENS:CURR:DC:RANG:AUTO?",
@@ -449,82 +453,569 @@ class Agilent34970A(Instrument):
             Command is applied to the preset channel scan list; use
             :param:`~Agilent34970A.channel` to edit the channel list. """
     )
+    voltage_ac_range =  Instrument.control(
+        "SENS:VOLT:AC:RANG?",
+        "SENS:VOLT:AC:RANG %g",
+        """ A float (or list of floats) parameters for the AC voltage range.
+            Input values are automatically rounded up to the nearest value in
+            the discrete set: (0.1, 1, 10, 100, 300) / Volt.
 
-    voltage_ac_range
-    voltage_ac_range_auto
-    voltage_ac_bandwidth
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
 
-    voltage_dc_aperature
-    voltage_dc_nplc
-    voltage_dc_range
-    voltage_dc_range_auto
-    voltage_dc_resolution
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=truncated_discrete_set,
+        values=(0.1,1,10,100,300)
+    )
+    voltage_ac_range_auto = Instrument.control(
+        "SENS:VOLT:AC:RANG:AUTO?",
+        "SENS:VOLT:AC:RANG:AUTO %i",
+        """ A boolean (or list of booleans) parameter to enable the AC voltage
+            auto range.
 
-    resistance_connection
-    resistance_aperature
-    resistance_nplc
-    resistance_compensation
-    resistance_range
-    resistance_range_auto
-    resistance_resolution
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
 
-    frequency_aperature
-    frequency_range_lower
-    frequency_voltage_range
-    frequency_voltage_range_auto
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values=(True,False),
+        cast=bool
+    )
+    voltage_ac_bandwidth = Instrument.control(
+        "SENS:VOLT:AC:BAND?",
+        "SENS:VOLT:AC:BAND %g,{}".format(_channel),
+        """ A string parameter for the AC filter bandwidth speed.
+            Values for the bandwidth speed are: `slow`, `medium`, `fast`.
 
-    period_aperature
-    period_voltage_range
-    period_voltage_range_auto
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
 
-    temperature_aperature
-    temperature_nplc
-    temperature_junction
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values={'slow':3,'medium',20,'fast':200},
+        map_values=True
+    )
+    voltage_dc_aperature = Instrument.control(
+        "SENS:VOLT:DC:APER?",
+        "SENS:VOLT:DC:APER %g",
+        """ A float (or list of floats) parameter for the DC voltage aperature
+            integration time. Values are automatically rounded up to the nearest
+            valid value in the range (0.0003, 1) second.
 
-    temperature_rtd_compensation
-    temperature_rtd_reference
-    temperatuer_rtd_type
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
 
-    temperature_tc_check
-    temperature_tc_junction
-    temperature_tc_junction_type
-    temperature_tc_type
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = truncated_discrete_set,
+        values = [x / 1e6 for x in range(300, 1000004, 4)]
+    )
+    voltage_dc_nplc = Instrument.control(
+        "SENS:VOLT:DC:NPLC?",
+        "SENS:VOLT:DC:NPLC %g",
+        """ A float (or list of floats) parameter for the DC voltage
+            integration in number of power line cycles. Input values are
+            automatically rounded up to the nearest value in the range:
+            (0.02,0.2,1,2,10,20,100,200).
 
-    temperature_therm_type
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
 
-    temperature_transducer_type
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=truncated_discrete_set,
+        values=(0.02,0.2,1,2,10,20,100,200)
+    )
+    voltage_dc_range =  Instrument.control(
+        "SENS:VOLT:DC:RANG?",
+        "SENS:VOLT:DC:RANG %g",
+        """ A float (or list of floats) parameters for the DC voltage range.
+            Input values are automatically rounded up to the nearest value in
+            the discrete set: (0.1, 1, 10, 100, 300) / Volt.
 
-    io_read_byte
-    io_read_word
-    totalize_clear
-    totalize_get_data
-    totalize_slope
-    totalize_start
-    totalize_stop
-    totalize_type
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
 
-    sense_function
-    sense_zero_auto
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=truncated_discrete_set,
+        values=(0.1,1,10,100,300)
+    )
+    voltage_dc_range_auto = Instrument.control(
+        "SENS:VOLT:DC:RANG:AUTO?",
+        "SENS:VOLT:DC:RANG:AUTO %i",
+        """ A boolean (or list of booleans) parameter to enable the DC voltage
+            auto range.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values=(True,False),
+        cast=bool
+    )
+    voltage_dc_resolution = Instrument.measurement(
+        "SENS:VOLT:DC:RES?",
+        """ Returns a float (or list of floats) parameter for the DC current
+            resolution. Setting the resolution is not supported.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """
+    )
+    resistance_aperature = Instrument.control(
+        "SENS:{}:APER?".format(_resistance_connection),
+        "SENS:{}:APER %g".format(_resistance_connection),
+        """ A float (or list of floats) parameter for the resistance aperature
+            integration time. Values are automatically rounded up to the nearest
+            valid value in the range (0.0004, 4) second.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = truncated_discrete_set,
+        values = [x / 1e6 for x in range(400, 4000004, 4)]
+    ) # TODO manual does not provide step size, test values w/ device
+    resistance_nplc = Instrument.control(
+        "SENS:{}:DC:NPLC?".format(_resistance_connection),
+        "SENS:{}:DC:NPLC %g".format(_resistance_connection),
+        """ A float (or a list of float) parameter for the resistance
+            integration in number of power line cycles. Input values are
+            automatically rounded up to the nearest value in the range:
+            (0.02,0.2,1,2,10,20,100,200).
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=truncated_discrete_set,
+        values=(0.02,0.2,1,2,10,20,100,200)
+    )
+    resistance_compensation = Instrument.control(
+        "SENS:{}:OCOM?".format(_resistance_connection),
+        "SENS:{}:OCOM %i".format(_resistance_connection),
+        """ A boolean (or a list of boolean) parameter for the resistance
+            offset compensation.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_discrete_set,
+        values = (0,1),
+        cast = bool
+    )
+    resistance_range =  Instrument.control(
+        "SENS:{}:RANG?".format(_resistance_connection),
+        "SENS:{}:RANG %g".format(_resistance_connection),
+        """ A float (or list of floats) parameters for the resistance range.
+            Input values are automatically rounded up to the nearest value in
+            the discrete set: (1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8) / Ohm.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=truncated_discrete_set,
+        values=(1e2,1e3,1e4,1e5,1e6,1e7,1e8)
+    )
+    resistance_range_auto = Instrument.control(
+        "SENS:{}:RANG:AUTO?".format(_resistance_connection),
+        "SENS:{}:RANG:AUTO %i".format(_resistance_connection),
+        """ A boolean (or list of booleans) parameter to enable the resistance
+            auto range.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values=(True,False),
+        cast=bool
+    )
+    resistance_resolution = Instrument.measurement(
+        "SENS:{}:RES?".format(_resistance_connection),
+        """ Returns a float (or list of floats) parameter for the resistance
+            resolution. Setting the resolution is not supported.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """
+    )
+    frequency_aperature = Instrument.control(
+        "SENS:FREQ:APER?",
+        "SENS:FREQ:APER %g",
+        """ A float (or list of floats) parameter for the frequency aperature
+            integration time. Values are automatically rounded up to the nearest
+            valid value from the set (0.01, 0.1, 1) second.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = truncated_discrete_set,
+        values = (0.01,0.1,1)
+    )
+    frequency_range_lower = Instrument.control(
+        "SENS:FREQ:RANG:LOW?",
+        "SENS:FREQ:RANG:LOW %i",
+        """ An integer (or a list of integer) parameter for the lowest expected
+            frequency expected in the input signal.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = truncated_range,
+        values = (3, 300000),
+        cast = int
+    )
+    frequency_voltage_range = Instrument.control(
+        "SENS:FREQ:VOLT:RANG?",
+        "SENS:FREQ:VOLT:RANG %g",
+        """ A float (or list of floats) parameters for the frequency measurement
+            voltage range. Input values are automatically rounded up to the
+            nearest value in the discrete set: (0.1, 1, 10, 100, 1000) / Volt.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=truncated_discrete_set,
+        values=(1e2,1e3,1e4,1e5,1e6,1e7,1e8)
+    )
+    frequency_voltage_range_auto = Instrument.control(
+        "SENS:FREQ:VOLT:RANG:AUTO?",
+        "SENS:FREQ:VOLT:RANG:AUTO %i",
+        """ A boolean (or list of booleans) parameter to enable the frequency
+            measurement voltage auto range.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values=(True,False),
+        cast=bool
+    )
+    period_aperature = Instrument.control(
+        "SENS:PER:APER?",
+        "SENS:FREQ:APER %g",
+        """ A float (or list of floats) parameter for the period aperature
+            integration time. Values are automatically rounded up to the nearest
+            valid value from the set (0.01, 0.1, 1) second.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = truncated_discrete_set,
+        values = (0.01,0.1,1)
+    )
+    period_voltage_range = Instrument.control(
+        "SENS:PER:VOLT:RANG?",
+        "SENS:PER:VOLT:RANG %g",
+        """ A float (or list of floats) parameters for the period measurement
+            voltage range. Input values are automatically rounded up to the
+            nearest value in the discrete set: (0.1, 1, 10, 100, 1000) / Volt.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            The command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=truncated_discrete_set,
+        values=(1e2,1e3,1e4,1e5,1e6,1e7,1e8)
+    )
+    period_voltage_range_auto = Instrument.control(
+        "SENS:PER:VOLT:RANG:AUTO?",
+        "SENS:PER:VOLT:RANG:AUTO %i",
+        """ A boolean (or list of booleans) parameter to enable the period
+            measurement voltage auto range.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=strict_discrete_set,
+        values=(True,False),
+        cast=bool
+    )
+    temperature_aperature = Instrument.control(
+        "SENS:TEMP:APER?",
+        "SENS:TEMP:APER %g",
+        """ A float (or list of floats) parameter for the temperature
+            measurement aperature integration time. Values are automatically
+            rounded up to the nearest valid value in the range
+            (4e-4, 1, 4e-6) second.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = truncated_discrete_set,
+        values = [x / 1e6 for x in range(400, 1000004, 4)]
+    )
+    temperature_nplc = Instrument.control(
+        "SENS:TEMP:NPLC?",
+        "SENS:TEMP:NPLC %g",
+        """ A float (or list of floats) parameter for the temperature
+            integration in number of power line cycles. Input values are
+            automatically rounded up to the nearest value in the range:
+            (0.02,0.2,1,2,10,20,100,200).
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator=truncated_discrete_set,
+        values=(0.02,0.2,1,2,10,20,100,200)
+    )
+    temperature_ref_junction = instrument.measurement(
+        "SENS:TEMP:RJUN?",
+        """ Returns a float (or a list of float) parameter for the internal
+            reference junction temperature on the specified channels. Values
+            are always returned in degrees Celsius.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list.
+        """
+    )
+    temperature_rtd_compensation = Instrument.control(
+        "SENS:TEMP:TRAN:{}:OCOM?".format(_rtd_connection),
+        "SENS:TEMP:TRAN:{}:OCOM %i".format(_rtd_connection),
+        """ A boolean (or a list of boolean) parameters for the state of the
+            RTD and FRTD (4 wire RTD) resistance measurement offset
+            compensation.
+
+            Use with the 34901A, 34902A and 34908A (RTD only) multiplexer
+            modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validators = strict_discrete_set,
+        values = (0,1),
+        cast = bool
+    )
+    temperature_rtd_reference = Instrument.control(
+        "SENS:TEMP:TRAN:{}:RES:REF?".format(_rtd_connection),
+        "SENS:TEMP:TRAN:{}:RES:REF %g".format(_rtd_connection),
+        """ A float (or a list of float) parameters for the nominal resistance
+            (R0 / Ohms) for a RTD or FRTD (4 wire RTD) at 0 degrees Celsius.
+
+            Use with the 34901A, 34902A and 34908A (RTD only) multiplexer
+            modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_range,
+        values = (49,2100)
+    )
+    temperature_rtd_type = Instrument.control(
+        "TEMP:TRAN:{}:TYPE?".format(_rtd_connection),
+        "TEMP:TRAN:{}:TYPE %i".format(_rtd_connection),
+        """ An integer (or a list of integer) parameter for the RTD type.
+            Supported RTD types are: `85` (a=0.00385) or `91` (a=0.00391).
+
+            Use with the 34901A, 34902A and 34908A (RTD only) multiplexer
+            modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_discrete_set,
+        values = (85,91)
+    )
+    temperature_tc_check = Instrument.control(
+        "SENS:TEMP:TRAN:TC:CHEC?",
+        "SENS:TEMP:TRAN:TC:CHEC %i",
+        """ A boolean (or a list of boolean) parameter to enable the check
+            function for an overload condition in thermocouple temperature
+            measurements.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_discrete_set,
+        values = (0,1),
+        cast = bool
+    )
+    temperature_tc_ref_junction = Instrument.control(
+        "SENS:TEMP:TRAN:TC:RJUN?",
+        "SENS:TEMP:TRAN:TC:RJUN %g",
+        """ A float (or a list of float) parameter for the thermocouple
+            fixed reference junction temperature in degrees Celsius.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_range,
+        values = (-20, 80)
+    )
+    temperature_tc_ref_junction_type = Instrument.control(
+        "SENS:TEMP:TRAN:TC:RJUN:TYPE?",
+        "SENS:TEMP:TRAN:TC:RJUN:TYPE %s",
+        """ A string (or a list of string) parameter for the type of reference
+            junction temperature used in thermocouple measurements. Values are:
+            `internal`, `external`, or `fixed`.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list.  """,
+        validator = strict_discrete_set,
+        values = {'external':'EXT', 'internal':'INT', 'fixed':'FIX'},
+        map_values = True
+    )
+    temperature_tc_type = Instrument.control(
+        "SENS:TEMP:TRAN:TC:TYPE?",
+        "SENS:TEMP:TRAN:TC:TYPE %s",
+        """ A string (or a list of string) for the thermocouple type. Values
+            are in the set: ('B', 'E', 'J', 'K', 'N', 'R', 'S', 'T').
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_discrete_set,
+        values = ('B','E','J','K','N','R','S','T')
+    )
+    temperature_thermistor_type = Instrument.control(
+        "SENS:TEMP:TRAN:THER:TYPE?",
+        "SENS:TEMP:TRAN:THER:TYPE %i",
+        """ An integer (or a list of integer) for the thermistor type. Values
+            are in the set: (2252, 5000, 10000).
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_discrete_set,
+        values = (2252, 5000, 10000)
+    )
+    temperature_transducer_type = Instrument.control(
+        "SENS:TEMP:TRAN:TYPE?",
+        "SENS:TEMP:TRAN:TYPE %s",
+        """ A string (or a list of string) for the temperature probe type.
+            Values are in the set: ('TC', 'RTD', 'FRTD', 'Thermistor').
+
+            Use with the 34901A, 34902A and 34908A (RTD & thermistor only)
+            multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_discrete_set,
+        values = ('TC', 'RTD', 'FRTD', 'Thermistor')
+    )
+    io_read_byte = Instrument.measurement(
+        "SENS:DIG:DATA:BYTE?",
+        """ Read the 8-bit byte from the specified channel.
+
+            Use with the 34907A multifunction module (channel 1 or 2 only).
+
+            The channel is set by :param:`~Agilent34970A.channel_digital`.
+        """
+    )
+    io_read_word = Instrument.measurement(
+        "SENS:DIG:DATA:WORD?",
+        """ Read the 16-bit word from both channels.
+
+            Use with the 34907A multifunction module (channels 1 and 2 only).
+
+            The channel is set by :param:`~Agilent34970A.channel_digital`. The
+            channel number must be `s01`, where `s` is the module location.
+        """
+    )
+    totalize_get_data = Instrument.measurement(
+        "SENS:TOT:DATA?",
+        """ Immediately read the count data on the specified counter/totalizer
+            channel. The maximum count is 2^26-1 and the device automatically
+            rolls over to 0 after exceeding the maximum count value.
+
+            Use with the 34907A multifunction module (channel 3 only).
+
+            The channel is set by :param:`~Agilent34970A.channel_digital`. The
+            channel number must be `s03`, where `s` is the module location. """
+    )
+    totalize_slope = Instrument.control(
+        "SENS:TOT:SLOP?",
+        "SENS:TOT:SLOP %s",
+        """ A string (or a list of string) parameters that specifies the
+            polarity of the totalizer input signal slope.
+
+            Use with the 34907A multifunction module (channel 3 only).
+
+            The channel is set by :param:`~Agilent34970A.channel_digital`. The
+            channel number must be `s03`, where `s` is the module location. """,
+        validator = strict_discrete_set,
+        values = {'positive':'POS', 'negative':'NEG'},
+        map_values = True
+    )
+    totalize_type = Instrument.control(
+        "SENS:TOT:TYPE?",
+        "SENS:TOT:TYPE %s",
+        """ A string (or a list of string) paramter for the totalizer channel
+            mode. Values are: `continue` (read the count without reseting the
+            measurement) and `reset` (read the count and reset the measurement).
+
+            Use with the 34907A multifunction module (channel 3 only).
+
+            The channel is set by :param:`~Agilent34970A.channel_digital`. The
+            channel number must be `s03`, where `s` is the module location. """,
+        validator = strict_discrete_set,
+        values = {'continue':'READ', 'reset':'RRES'},
+        map_values = True
+    )
+    sense_function = Instrument.control(
+        "SENS:FUNC?",
+        "SENS:FUNC %s",
+        """ A string (or a list of string) parameters for the
+            measurement functions on the channels.
+
+            Use with the 34901A, 34902A and 34908A multiplexer modules.
+
+            Command is applied to the preset channel scan list; use
+            :param:`~Agilent34970A.channel` to edit the channel list. """,
+        validator = strict_discrete_set,
+        values = ('TEMP','VOLT','VOLT:AC','RES',
+                  'FRES','CURR','CURR:AC','FREQ','PER'),
+        get_process = lambda v: v.strip('"'),
+        set_process = lambda v: '"'+v+'"'
+    )
+    sense_zero_auto = Instrument.control(
+        "SENS:ZERO:AUTO?",
+        "SENS:ZERO:AUTO %s",
+        """ A string (or a list of string) parameters for the device autozero
+            mode.
+
+            The channel is set by :param:`~Agilent34970A.channel`. The
+            channel number must be `sxx`, where `s` is the module location and
+            `xx` is the location on the module. """,
+        validator = strict_discrete_set,
+        values = {'off':'OFF', 'once':'ONCE', 'on':'ON', 'on':1, 'off':0},
+        map_values = True
+    )
 
     # SOURce subsystem commands
-    source_dio_word = Instrument.control(
+    io_write_word = Instrument.control(
         "SOUR:DIG:DATA:WORD? (@{})".format(_channel_digital),
         "SOUR:DIG:DATA:WORD %s,(@{})".format(_channel_digital),
         """ An integer parameter representing the 16 bit word that is output
             on `channel_digital`. """
     )
-    source_dio_byte = Instrument.control(
+    io_write_byte = Instrument.control(
         "SOUR:DIG:DATA:BYTE? (@{})".format(_channel_digital),
         "SOUR:DIG:DATA:BYTE %g,(@{})".format(_channel_digital),
         """ An integer parameter representing the 8 bit byte that is output
             on `channel_digital`. """
     )
-    source_dio_state = Instrument.measurement(
+    io_state = Instrument.measurement(
         "SOUR:DIG:STAT? (@{})".format(_channel_digital),
         """ Returns the status (input or output) of the digital channels
             specified by `channel_digital`. """
     )
-    source_dac_voltage = Instrument.control(
+    dac_voltage = Instrument.control(
         "SOUR:VOLT? (@{})".format(_channel_digital),
         "SOUR:VOLT %g,(@{})".format(_channel_digital),
         """ A float parameter for the output voltage level on the DAC
@@ -824,3 +1315,33 @@ class Agilent34970A(Instrument):
             Values are: `RTD` for 2 wire connections, or `FRTD` for 4 wires. """
         strict_discrete_set(connection, ('RTD','FRTD'))
         self._rtd_connection = connection
+    @property
+    def totalize_clear(self):
+        """ Immediately clear the count on the specified counter/totalizer
+            channel.
+
+            Use with the 34907A multifunction module (channel 3 only).
+
+            The channel is set by :param:`~Agilent34970A.channel_digital`. The
+            channel number must be `s03`, where `s` is the module location. """
+        self.write("SENS:TOT:CLE:IMM")
+    @property
+    def totalize_start(self):
+        """Immediately start the count on the specified counter/totalizer
+            channel.
+
+            Use with the 34907A multifunction module (channel 3 only).
+
+            The channel is set by :param:`~Agilent34970A.channel_digital`. The
+            channel number must be `s03`, where `s` is the module location. """
+        self.write("SENS:TOT:STAR:IMM")
+    @property
+    def totalize_stop(self):
+        """Immediately stop the count on the specified counter/totalizer
+            channel.
+
+            Use with the 34907A multifunction module (channel 3 only).
+
+            The channel is set by :param:`~Agilent34970A.channel_digital`. The
+            channel number must be `s03`, where `s` is the module location. """
+        self.write("SENS:TOT:STOP:IMM")
