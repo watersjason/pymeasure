@@ -44,9 +44,11 @@ class Agilent34970A(Instrument):
         TODO
 
     """
-    # Channel list strings
+    # Default parameters for channels and connection types
     _channel = '(@)'
     _channel_digital = '(@)'
+    _resistance_connection = 'FRES'
+    _rtd_connection = 'FRTD'
 
     # CALCulate
     math_average = Instrument.measurement(
@@ -448,7 +450,61 @@ class Agilent34970A(Instrument):
             :param:`~Agilent34970A.channel` to edit the channel list. """
     )
 
-    # TODO continue with SENS
+    voltage_ac_range
+    voltage_ac_range_auto
+    voltage_ac_bandwidth
+
+    voltage_dc_aperature
+    voltage_dc_nplc
+    voltage_dc_range
+    voltage_dc_range_auto
+    voltage_dc_resolution
+
+    resistance_connection
+    resistance_aperature
+    resistance_nplc
+    resistance_compensation
+    resistance_range
+    resistance_range_auto
+    resistance_resolution
+
+    frequency_aperature
+    frequency_range_lower
+    frequency_voltage_range
+    frequency_voltage_range_auto
+
+    period_aperature
+    period_voltage_range
+    period_voltage_range_auto
+
+    temperature_aperature
+    temperature_nplc
+    temperature_junction
+
+    temperature_rtd_compensation
+    temperature_rtd_reference
+    temperatuer_rtd_type
+
+    temperature_tc_check
+    temperature_tc_junction
+    temperature_tc_junction_type
+    temperature_tc_type
+
+    temperature_therm_type
+
+    temperature_transducer_type
+
+    io_read_byte
+    io_read_word
+    totalize_clear
+    totalize_get_data
+    totalize_slope
+    totalize_start
+    totalize_stop
+    totalize_type
+
+    sense_function
+    sense_zero_auto
 
     # SOURce subsystem commands
     source_dio_word = Instrument.control(
@@ -744,3 +800,27 @@ class Agilent34970A(Instrument):
     def wait_for_completion(self):
         """ Force the device to wait for all pending operations to complete. """
         self.write('*WAI')
+
+    # SENSe
+    @property
+    def resistance_connection(self):
+        """ A string parameter for the resistance measurement connection type.
+            Values are: `RES` for 2 wire connections, or `FRES` for 4 wires. """
+        return self._resistance_connection
+    @resistance_connection.setter
+    def resistance_connection(self, connection):
+        """ A string parameter for the resistance measurement connection type.
+            Values are: `RES` for 2 wire connections, or `FRES` for 4 wires. """
+        strict_discrete_set(connection, ('RES','FRES'))
+        self._resistance_connection = connection
+    @property
+    def temperature_rtd_connection(self):
+        """ A string parameter for the RTD resistance measurement connection.
+            Values are: `RTD` for 2 wire connections, or `FRTD` for 4 wires. """
+        return self._rtd_connection
+    @resistance_connection.setter
+    def temperature_rtd_connection(self, connection):
+        """ A string parameter for the RTD resistance measurement connection.
+            Values are: `RTD` for 2 wire connections, or `FRTD` for 4 wires. """
+        strict_discrete_set(connection, ('RTD','FRTD'))
+        self._rtd_connection = connection
