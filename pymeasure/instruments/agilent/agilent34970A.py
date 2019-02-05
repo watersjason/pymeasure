@@ -30,7 +30,7 @@ from pymeasure.instruments import Instrument
 from pymeasure.instruments.validators import (truncated_range,
                                               strict_discrete_set,
                                               truncated_discrete_set,
-                                              joined_validators)
+                                              joined_validators, strict_range)
 
 class Agilent34970A(Instrument):
     """
@@ -45,12 +45,11 @@ class Agilent34970A(Instrument):
 
     """
     # Default parameters for channels and connection types
-    _channel = '(@)'
-    _channel_digital = '(@)'
+    _channel_io = None
     _resistance_connection = 'FRES'
     _rtd_connection = 'FRTD'
 
-    # CALCulate
+    # CALCulate subsystem commands
     math_average = Instrument.measurement(
         "CALC:AVER:AVER?",
         """ Returns a float value of the calculated
@@ -88,11 +87,10 @@ class Agilent34970A(Instrument):
     # CALibration subsystem commands
     calibration = Instrument.measurement(
         "CAL?",
-        """ Perform an internal calibration of the DMM. Returns `True` if
-            calibration succeeds. """,
-        validator = strict_discrete_set,
-        values = {True:0, False:1},
-        map_values = True
+        """ Perform an internal calibration of the DMM.
+            Returns `True` if calibration fails. """,
+        cast=int,
+        get_process=lambda v:bool(v)
     )
     calibration_count = Instrument.measurement(
         "CAL:COUN?",
@@ -121,16 +119,16 @@ class Agilent34970A(Instrument):
     # CONFigure subsystem commands
     # See ...
 
-    # DATA subsystem commands
+    # DATA subsystem commands - commands are only partially implemented
     data_last = Instrument.measurement(
         "DATA:LAST?",
         """ Returns the most recent reading on `channel`. """
-    )
+    ) #TODO test
     data_length = Instrument.measurement(
         "DATA:POIN?",
         """ A float parameter for the total number
             of readings stored in reading memory. """
-    )
+    ) #TODO test
     data_length_threshold = Instrument.control(
         "DATA:POIN:EVEN:THR?",
         "DATA:POIN:EVEN:THR %g",
@@ -139,8 +137,7 @@ class Agilent34970A(Instrument):
         validator = truncated_range,
         values = (1,50000),
         cast = int
-    )
-    # skip DATA:REMOVE? command
+    ) #TODO test
 
     # DIAGnostic subsystem commands
     # Commands for this susbsystem are not implemented.
@@ -162,97 +159,83 @@ class Agilent34970A(Instrument):
             front panel display. The message is truncated at 12 characters. """
     )
 
-    # FORMat
+    # FORMat subsystem commands
     read_alarm_enable = Instrument.control(
         "FORM:READ:ALAR?",
-        "FORM:READ:ALAR %s",
+        "FORM:READ:ALAR %i",
         """ TODO """,
         validator=strict_discrete_set,
-        values={True:'ON',
-                False:'OFF'},
-        map_values=True,
-        cast=bool
+        values=(True, False),
+        cast=int,
+        get_process=lambda v:bool(v)
     )
     read_channel_enable = Instrument.control(
         "FORM:READ:CHAN?",
-        "FORM:READ:CHAN %s",
+        "FORM:READ:CHAN %i",
         """ TODO """,
         validator=strict_discrete_set,
-        values={True:'ON',
-                False:'OFF'},
-        map_values=True,
-        cast=bool
+        values=(True, False),
+        cast=int,
+        get_process=lambda v:bool(v)
     )
     read_time_enable = Instrument.control(
         "FORM:READ:TIME?",
-        "FORM:READ:TIME %s",
+        "FORM:READ:TIME %i",
         """ TODO """,
         validator=strict_discrete_set,
-        values={True:'ON',
-                False:'OFF'},
-        map_values=True,
-        cast=bool
+        values=(True, False),
+        cast=int,
+        get_process=lambda v:bool(v)
     )
     read_unit_enable = Instrument.control(
         "FORM:READ:UNIT?",
-        "FORM:READ:UNIT %s",
+        "FORM:READ:UNIT %i",
         """ TODO """,
         validator=strict_discrete_set,
-        values={True:'ON',
-                False:'OFF'},
-        map_values=True,
-        cast=bool
+        values=(True, False),
+        cast=int,
+        get_process=lambda v:bool(v)
     )
-    read_time_relative = Instrument.control(
+    read_time_format = Instrument.control(
         "FORM:READ:TIME:TYPE?",
         "FORM:READ:TIME:TYPE %s",
-        """ TODO """,
+        """ A string parameter to set/get the time format for devoce timestamps.
+            String values are: 'absolute' or 'relative'. The relative format is
+            considerably faster than the absolute format
+        """,
         validator=strict_discrete_set,
-        values={True:'REL',
-                False:'ABS'},
-        map_values=True,
-        cast=bool
+        values={'relative':'REL',
+                'absolute':'ABS'},
+        map_values=True
     )
 
-    # IEEE-488 commands
-    register_clear = Instrument.setting(
-        "*CLS",
-        """ Clear the event registers for all register groups. """
-    )
-    # skip *ESE/*ESE? and ESR?
-    power_on_state = Instrument.control(
+    # IEEE-488 commands - commands are only partially implemented
+    power_on_clear = Instrument.control(
         "*PSC?",
         "*PSC %g",
         """ A boolean parameter for the state of the power-on status.
             When `True`, the device registers are cleared on power-on. """,
         validator=strict_discrete_set,
         values=(0,1),
-        cast=bool
-    )
-    # skip *RCL and *SAV
-    # skip *SRE and *STB?
-    device_test = Instrument.measurement(
-        "*TST?",
-        """ Run the device test. Returns `True` if 1 or more tests fail. """,
-        cast=bool
+        cast=int,
+        get_process=lambda v:bool(v)
     )
 
     # INSTrument subsystem commands
     dmm_installed = Instrument.measurement(
         "INST:DMM:INST?",
         """ A boolean property for the physically installed DMM. """,
-        cast=bool
+        cast=int,
+        get_process=lambda v:bool(v)
     )
     dmm_enable = Instrument.control(
         "INST:DMM?",
-        "INST:DMM %s",
+        "INST:DMM %i",
         """ A boolean property for the enabled state of the internal DMM. """,
         validator=strict_discrete_set,
-        values={True:'ON',
-                False:'OFF'},
-        map_values=True,
-        cast=bool,
-        set_process=lambda v: v.strip('\n')
+        values=(True, False),
+        cast=int,
+        get_process=lambda v:bool(v)
     )
 
     # LXI subsystem commands
@@ -271,51 +254,66 @@ class Agilent34970A(Instrument):
     remote_channel = Instrument.control(
         "ROUT:MON?",
         "ROUT:MON %s",
-        """ An integer parameter that sets the remote channel. """,
+        """ An integer parameter that sets the remote channel
+            displayed on the device front panel. """,
         set_process=lambda v: '(@'+str(v)+')',
         get_process=lambda v: int(v.strip(')').split('@')[-1])
     )
     remote_enable = Instrument.control(
         "ROUT:MON:STAT?",
-        "ROUT:MON:STAT %s",
+        "ROUT:MON:STAT %i",
         """ A boolean parameter that enables the remote interface. """,
         validator=strict_discrete_set,
-        values={False:'OFF',
-                True:'ON'},
-        map_values=True,
-        cast=bool
+        values=(True, False),
+        cast=int,
+        get_process=lambda v:bool(v)
     )
     remote_data = Instrument.measurement(
         "ROUT:DATA?",
         """ Read data from the channel selected by
             :attr:`~.Agilent34970A.remote_channel`. """
     )
-    channel_scan_list = Instrument.control(
-        "ROUT:SCAN?",
-        "ROUT:SCAN %s",
-        """ An integer, float or list parameter for the
-            channels included in the device scan list. """,
-        get_process=lambda v:[_i for _i in v.strip('()@')],
-        set_process=lambda v:'@('+str([v]).strip('()[]')+')'
-    )
     scan_list_size = Instrument.measurement(
         "ROUT:SCAN:SIZE?",
-        """ TODO """
+        """ An integer parameter for the total
+            number of channels in the scan list. """,
+        cast=int
     )
     remote_channel_delay = Instrument.control(
         "ROUT:CHAN:DEL?",
         "ROUT:CHAN:DEL %g",
-        """ TODO """
-    ) # TODO link to channel list
+        """ A float (or a list of float) parameter. The value is the delay
+            (in seconds) between multiplexer channels in the scan list. The
+            delay can take on values from 0 to 60 seconds with 1 ms resolution.
+
+            List parameters are only supported for getting the channel delay
+            values. When setting the channel delay values, a single float
+            is applied to all channels set by :param:~`.Agilent34970A.channel`.
+        """,
+        validator=strict_range,
+        values=(0,60)
+    )
     remote_channel_delay_auto = Instrument.control(
         "ROUT:CHAN:DEL:AUTO?",
-        "ROUT:CHAN:CEL:AUTO %s",
-        """ TODO """
-    ) # TODO link to channel list
-    remote_channel_source = Instrument.control(
+        "ROUT:CHAN:DEL:AUTO %i",
+        """ A boolean (or a list of boolean) parameter. When `True`, the
+            channel delay is determined by the device using on the function,
+            range, integration time, and AC filter settings. """,
+        validator=strict_discrete_set,
+        values=(True, False),
+        cast=int,
+        get_process=lambda v:(bool(v) if isinstance(v, int) else
+                              [bool(_v) for _v in v])
+    )
+    remote_advance_signal = Instrument.control(
         "ROUT:CHAN:ADV:SOUR?",
         "ROUT:CHAN:ADV:SOUR %s",
-        """ TODO """,
+        """ A string parameter for the signal source that advances the device
+            to the next channel when recieved.
+
+            Options are: 'external' (TTL signal), 'bus' (software signal), or
+            'immediate'. Only 'immediate' is allowed when the DMM is enabled by
+            :param:~`.Agilent34970A.dmm_enable`. """,
         validator=strict_discrete_set,
         values={'external':'EXT',
                 'bus':'BUS',
@@ -325,18 +323,20 @@ class Agilent34970A(Instrument):
     remote_channel_4_wire = Instrument.control(
         "ROUT:CHAN:FWIR?",
         "ROUT:CHAN:FWIR %i",
-        """ TODO """,
+        """ A boolean (or a list of boolean) parameter. When `True`, the channel
+            is configured for 4-wire measurements and channel 'n' is paired with
+            channel 'n'+10 (34901A) or 'n'+8 (34902A). """,
         validator=strict_discrete_set,
-        values={True,'ON',
-                False,'OFF'},
-        map_values=True,
-        cast=bool
+        values=(True, False),
+        cast=int,
+        get_process=lambda v:(bool(v) if isinstance(v, int) else
+                              [bool(_v) for _v in v])
     )
 
     # SENSe subsystem commands
     current_ac_bandwidth = Instrument.control(
         "SENS:CURR:AC:BAND?",
-        "SENS:CURR:AC:BAND %g,{}".format(_channel),
+        "SENS:CURR:AC:BAND %g",
         """ A string parameter for the AC filter bandwidth speed.
             Values for the bandwidth speed are: `slow`, `medium`, `fast`.
 
@@ -345,7 +345,7 @@ class Agilent34970A(Instrument):
             The command is applied to the preset channel scan list; use
             :param:`~Agilent34970A.channel` to edit the channel list. """,
         validator=strict_discrete_set,
-        values={'slow':3,'medium',20,'fast':200},
+        values={'slow':3,'medium':20,'fast':200},
         map_values=True
     )
     current_ac_range = Instrument.control(
@@ -376,7 +376,7 @@ class Agilent34970A(Instrument):
         values=(True,False),
         cast=bool
     )
-    current_ac_resolution = Instruement.measurement(
+    current_ac_resolution = Instrument.measurement(
         "SENS:CURR:AC:RES?",
         """ Returns a float (or list of floats) parameter for the AC current
             resolution. Setting the resolution is not supported.
@@ -483,7 +483,7 @@ class Agilent34970A(Instrument):
     )
     voltage_ac_bandwidth = Instrument.control(
         "SENS:VOLT:AC:BAND?",
-        "SENS:VOLT:AC:BAND %g,{}".format(_channel),
+        "SENS:VOLT:AC:BAND %g",
         """ A string parameter for the AC filter bandwidth speed.
             Values for the bandwidth speed are: `slow`, `medium`, `fast`.
 
@@ -492,7 +492,7 @@ class Agilent34970A(Instrument):
             The command is applied to the preset channel scan list; use
             :param:`~Agilent34970A.channel` to edit the channel list. """,
         validator=strict_discrete_set,
-        values={'slow':3,'medium',20,'fast':200},
+        values={'slow':3,'medium':20,'fast':200},
         map_values=True
     )
     voltage_dc_aperature = Instrument.control(
@@ -771,7 +771,7 @@ class Agilent34970A(Instrument):
         validator=truncated_discrete_set,
         values=(0.02,0.2,1,2,10,20,100,200)
     )
-    temperature_ref_junction = instrument.measurement(
+    temperature_ref_junction = Instrument.measurement(
         "SENS:TEMP:RJUN?",
         """ Returns a float (or a list of float) parameter for the internal
             reference junction temperature on the specified channels. Values
@@ -908,25 +908,6 @@ class Agilent34970A(Instrument):
         validator = strict_discrete_set,
         values = ('TC', 'RTD', 'FRTD', 'Thermistor')
     )
-    io_read_byte = Instrument.measurement(
-        "SENS:DIG:DATA:BYTE?",
-        """ Read the 8-bit byte from the specified channel.
-
-            Use with the 34907A multifunction module (channel 1 or 2 only).
-
-            The channel is set by :param:`~Agilent34970A.channel_digital`.
-        """
-    )
-    io_read_word = Instrument.measurement(
-        "SENS:DIG:DATA:WORD?",
-        """ Read the 16-bit word from both channels.
-
-            Use with the 34907A multifunction module (channels 1 and 2 only).
-
-            The channel is set by :param:`~Agilent34970A.channel_digital`. The
-            channel number must be `s01`, where `s` is the module location.
-        """
-    )
     totalize_get_data = Instrument.measurement(
         "SENS:TOT:DATA?",
         """ Immediately read the count data on the specified counter/totalizer
@@ -997,39 +978,11 @@ class Agilent34970A(Instrument):
         map_values = True
     )
 
-    # SOURce subsystem commands
-    io_write_word = Instrument.control(
-        "SOUR:DIG:DATA:WORD? (@{})".format(_channel_digital),
-        "SOUR:DIG:DATA:WORD %s,(@{})".format(_channel_digital),
-        """ An integer parameter representing the 16 bit word that is output
-            on `channel_digital`. """
-    )
-    io_write_byte = Instrument.control(
-        "SOUR:DIG:DATA:BYTE? (@{})".format(_channel_digital),
-        "SOUR:DIG:DATA:BYTE %g,(@{})".format(_channel_digital),
-        """ An integer parameter representing the 8 bit byte that is output
-            on `channel_digital`. """
-    )
-    io_state = Instrument.measurement(
-        "SOUR:DIG:STAT? (@{})".format(_channel_digital),
-        """ Returns the status (input or output) of the digital channels
-            specified by `channel_digital`. """
-    )
-    dac_voltage = Instrument.control(
-        "SOUR:VOLT? (@{})".format(_channel_digital),
-        "SOUR:VOLT %g,(@{})".format(_channel_digital),
-        """ A float parameter for the output voltage level on the DAC
-            specified by `channel_digital`. Each DAC channel is capable of
-            outputting -12 V to +12 V (resolution 1 mV) at 10 mA max. """,
-        validator = truncated_range,
-        values = (-12, 12)
-    )
-
     # STATus subsystem commands
     # TODO: Subsystem replies are a string of length 16. Convert reply string
     #       to a list of integers. Use the list to index the bit definitions.
 
-    # SYSTem subsystem commands
+    # SYSTem subsystem commands - commands are only partially implemented
     system_alarm = Instrument.measurement(
         "SYST:ALAR?",
         """ Read the alarm data from the alarm queue. Returns a dictionary with
@@ -1089,12 +1042,10 @@ class Agilent34970A(Instrument):
                   'lockout':'RWL'},
         set_process = lambda v: v.casefold()
     )
-    # skip lock commands
     system_preset = Instrument.setting(
         "SYST:PRES",
         """ Put the device in preset configuration. """
     )
-    # skip security command
     system_time = Instrument.control(
         "SYST:TIME?",
         "SYST:TIME %s",
@@ -1147,7 +1098,6 @@ class Agilent34970A(Instrument):
         super(Agilent34970A, self).__init__(adapter,
               "Agilent 34970A DAQ/Switch Unit", **kwargs)
         self.adapter.connection.timeout = 5000
-        self.write('ROUT:SCAN (@)')
 
     #
     @property
@@ -1164,41 +1114,49 @@ class Agilent34970A(Instrument):
             that a command is applied. Individual channels are of the form:
             `scc`, where `s` is the card slot number (1, 2, or 3) and `cc` is
             the channel number on the specified card. """
-        return [int(_i) for _i in self._channel.strip('()@')]
+        _channel = self.ask('ROUT:SCAN?').split('(')[-1].strip('@)\n')
+        _channel = _channel.split(',')
+
+        if _channel == ['']:
+            raise AttributeError('The `channel` is not set.')
+        elif len(_channel) == 1:
+            _channel = int(_channel[0])
+        else:
+            _channel = [int(_i) for _i in _channel]
+        return _channel
     @channel.setter
     def channel(self, channel):
-        if isinstance(channel, (int, float)):
-            _channel = str(channel)
-        elif isinstance(_channel, list):
-            for _i in _channel:
+        if channel is None:
+            self.write('ROUT:SCAN (@)')
+        elif isinstance(channel, (int, float)):
+            self.write('ROUT:SCAN (@{})'.format(channel))
+        elif isinstance(channel, (list, tuple)):
+            for _i in channel:
                 if not isinstance(_i, (int, float)):
-                    raise TypeError('The elements in `channel` must be '
-                                    'integers or floats.')
-            _channel = str(channel).strip('()[]')
+                    raise TypeError('Elements in `channel` must be int/float.')
+            _cmd = 'ROUT:SCAN (@ {})'.format(channel)
+            _cmd = _cmd.replace('(@ (', '(@ ').replace('))', ')')
+            self.write(_cmd)
         else:
             raise TypeError('The `channel` must be an integer, float, or a '
                             'list of integers and floats.')
-        self._channel = '(@' + _channel + ')'
     @property
-    def channel_digital(self):
-        """ TODO """
-        return [int(_i) for _i in self._channel_digital.strip('()@')]
-    @channel_digital.setter
-    def channel_digital(self, channel):
-        if isinstance(channel, (int,float)):
-            _channel = str(channel)
-        elif isinstance(channel, list):
-            for _i in _channel:
-                if not isinstance(_i, (int, float)):
-                    raise TypeError('The elements in `channel` must be '
-                                    'integers or floats.')
-            _channel = str(channel).strip('()[]')
+    def channel_io(self):
+        """ The device channel for IO processes. """
+        if self._channel_io is None:
+            raise ValueError('The `channel_io` is not set; values '
+                             'must be set before they can be get. ')
         else:
-            raise TypeError('The `channel` must be an integer, float, or a '
-                            'list of integers and floats.')
-        self._channel_digital = '(@' + _channel + ')'
+            return self._channel_io
+    @channel_io.setter
+    def channel_io(self, channel):
+        if isinstance(channel, (int,float,list,tuple)):
+            self._channel_io = channel
+        else:
+            raise ValueError('The `channel` must be an int, float,'
+                             ' or a list/tuple of int and float.')
 
-    #
+    # General device commands
     @property
     def abort(self):
         """ TODO """
@@ -1231,22 +1189,24 @@ class Agilent34970A(Instrument):
             state_code -    An iterable, of len 2. Element 1: the new security
                             state (0, 1); element 2: the security code.
             """
-        return self.query("CAL:SEC:STAT?")
+        return bool(int(self.ask("CAL:SEC:STAT?")))
     @calibration_secure.setter
     def calibration_secure(self,state_code):
         if len(state_code) is not 2:
             raise TypeError('The `state_code` must have a length of 2.')
-        self.write("CAL:SEC:STAT {},{}",format(state_code))
+        strict_discrete_set(state_code[0], (True,False))
+        self.write("CAL:SEC:STAT {0:d}, {1}".format(*state_code))
 
     # SYSTem subsystem commands
     @property
     def card_id(self):
-        """ Get the card ID for `channel`. """
-        try:
-            strict_discrete_set(self.channel, (100,200,300))
-        except ValueError:
-            raise ValueError('Parameter `channel` must be 100, 200, or 300.')
-        return self.ask('SYST:CTYP? {}'.format(self.channel)).strip('\n')
+        """ Returns a tuple with the ordered ID strings for
+            the cards in the device slots 100, 200, and 300. """
+        _val = []
+        _val.append(self.ask('SYST:CTYP? 100').strip('\n'))
+        _val.append(self.ask('SYST:CTYP? 200').strip('\n'))
+        _val.append(self.ask('SYST:CTYP? 300').strip('\n'))
+        return tuple(_val)
 
     # CONFigure subsystem commands
     @property
@@ -1262,6 +1222,18 @@ class Agilent34970A(Instrument):
         self.write('DISP:TEXT:CLE')
 
     # IEEE-488 commands
+    @property
+    def register_clear(self):
+        """ Clear the event registers for all register groups. """
+        self.write("*CLS")
+    @property
+    def device_test(self):
+        """ Run the device test. If none of the tests fail, return `True`. """
+        _timeout = self.timeout
+        self.timeout = 60000
+        _reply = not(bool(int(self.ask("*TST?"))))
+        self.timeout = _timeout
+        return _reply
     @property
     def operation_complete(self):
         """ Start the operation completion status engine. """
@@ -1292,7 +1264,7 @@ class Agilent34970A(Instrument):
         """ Force the device to wait for all pending operations to complete. """
         self.write('*WAI')
 
-    # SENSe
+    # SENSe subsystem commands
     @property
     def resistance_connection(self):
         """ A string parameter for the resistance measurement connection type.
@@ -1345,3 +1317,71 @@ class Agilent34970A(Instrument):
             The channel is set by :param:`~Agilent34970A.channel_digital`. The
             channel number must be `s03`, where `s` is the module location. """
         self.write("SENS:TOT:STOP:IMM")
+
+    # SOURce subsystem commands
+    @property
+    def io_word(self):
+        """
+        An integer parameter representing the 16 bit word read from or written
+        to `channel_io`.
+        """
+        _channel = str(self.channel_io).strip('()[]')
+        if _channel[-1] == '1':
+            return int(self.ask("SOUR:DIG:DATA:WORD? (@{})".format(_channel)))
+        else:
+            raise ValueError('IO words can only be read from channel `x01`. '
+                             'Use `io_byte` to read from other channels.')
+    @io_word.setter
+    def io_word(self, word):
+        strict_range(word, (0,65535))
+        _channel = str(self.channel_io).strip('()[]')
+        if _channel[-1] == '1':
+            self.write("SOUR:DIG:DATA:WORD {}, (@{})".format(word, _channel))
+        else:
+            raise ValueError('IO words can only be written to channel `x01`. '
+                             'Use `io_byte` to write to other channels.')
+    @property
+    def io_byte(self):
+        """
+        An integer (or a list of integer) parameter representing the 8 bit byte
+        read from or written to `channel_io`.
+        """
+        _channel = str(self.channel_io).strip('()[]')
+        _val = self.ask("SOUR:DIG:DATA:BYTE? (@{})".format(_channel)).split(',')
+        _val = tuple([int(_v) for _v in _val])
+        if len(_val) == 1:
+            return _val[0]
+        else:
+            return _val
+    @io_byte.setter
+    def io_byte(self, byte):
+        strict_range(byte, (0,255))
+        _channel = str(self.channel_io).strip('()[]')
+        self.write("SOUR:DIG:DATA:BYTE {}, (@{})".format(byte, _channel))
+    @property
+    def io_state(self):
+        """ Returns the state ('input' or 'output') of the digital channels
+            specified by `channel_io`. """
+        _channel = str(self.channel_io).strip('()[]')
+        _val = self.ask("SOUR:DIG:STAT? (@{})".format(_channel)).split(',')
+        _val = tuple(['output' if int(_v) else 'input' for _v in _val])
+        if len(_val) == 1:
+            return _val[0]
+        else:
+            return _val
+    @property
+    def dac_voltage(self):
+        """ A float parameter for the output voltage level on the DAC
+            specified by `channel_io`. Each DAC channel is capable of
+            outputting -12 V to +12 V (resolution 1 mV) at 10 mA max. """
+        _channel = str(self.channel_io).strip('()[]')
+        _val = self.ask("SOUR:VOLT? (@{})".format(_channel)).split(',')
+        if len(_val) == 1:
+            return float(_val[0])
+        else:
+            return tuple([float(_v) for _v in _val])
+    @dac_voltage.setter
+    def dac_voltage(self, voltage):
+        truncated_range(voltage, (-12, 12))
+        _channel = _channel = str(self.channel_io).strip('()[]')
+        self.write("SOUR:VOLT {}, (@{})".format(voltage, _channel))
