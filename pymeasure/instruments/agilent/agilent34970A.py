@@ -994,7 +994,7 @@ class Agilent34970A(Instrument):
                                        'ss','channel number','alarm threshold',
                                        'alarm number'), v))
     )
-    card_reset = Instrument.setting(
+    system_card_reset = Instrument.setting(
         "SYST:CPON %s",
         """ Resets the module in the specified slot to its power-on state.
             See manual for Factory Reset State for a complete listing of
@@ -1199,7 +1199,7 @@ class Agilent34970A(Instrument):
 
     # SYSTem subsystem commands
     @property
-    def card_id(self):
+    def system_card_identify(self):
         """ Returns a tuple with the ordered ID strings for
             the cards in the device slots 100, 200, and 300. """
         _val = []
@@ -1277,12 +1277,12 @@ class Agilent34970A(Instrument):
         strict_discrete_set(connection, ('RES','FRES'))
         self._resistance_connection = connection
     @property
-    def temperature_rtd_connection(self):
+    def temperature_connection(self):
         """ A string parameter for the RTD resistance measurement connection.
             Values are: `RTD` for 2 wire connections, or `FRTD` for 4 wires. """
         return self._rtd_connection
     @resistance_connection.setter
-    def temperature_rtd_connection(self, connection):
+    def temperature_connection(self, connection):
         """ A string parameter for the RTD resistance measurement connection.
             Values are: `RTD` for 2 wire connections, or `FRTD` for 4 wires. """
         strict_discrete_set(connection, ('RTD','FRTD'))
