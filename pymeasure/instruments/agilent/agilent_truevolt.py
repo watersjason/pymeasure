@@ -32,7 +32,7 @@ from pymeasure.instruments.validators import (truncated_range,
                                               truncated_discrete_set)
 from numpy import arange
 
-class Agilent3446xA(Instrument):
+class AgilentTruevolt(Instrument):
     """
     TODO
 
@@ -1274,3 +1274,7 @@ class Agilent3446xA(Instrument):
         """ """
     def measure_triggered(self):
         """ """
+
+class Agilent34470A(AgilentTruevolt):
+    def __init__(self, adapter, **kwargs):
+        super().__init__(adapter, **kwargs)
