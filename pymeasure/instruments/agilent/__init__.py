@@ -31,3 +31,4 @@ from .agilentB2961A import AgilentB2961A
 from .agilent3458A import Agilent3458A
 from .agilent53131A import Agilent53131A
 from .agilent53131A import Agilent53131A
+from .agilent_truevolt import Agilent34470A

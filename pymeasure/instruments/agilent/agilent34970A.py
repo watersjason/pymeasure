@@ -1117,12 +1117,12 @@ class Agilent34970A(Instrument):
         _channel = self.ask('ROUT:SCAN?').split('(')[-1].strip('@)\n')
         _channel = _channel.split(',')
 
-        if _channel == ['']:
+        if self._channel == ['']:
             raise AttributeError('The `channel` is not set.')
-        elif len(_channel) == 1:
-            _channel = int(_channel[0])
+        elif len(self._channel) == 1:
+            self._channel = int(self._channel[0])
         else:
-            _channel = [int(_i) for _i in _channel]
+            self._channel = [int(_i) for _i in self._channel]
         return _channel
     @channel.setter
     def channel(self, channel):
@@ -1213,7 +1213,6 @@ class Agilent34970A(Instrument):
     def configure(self):
         """ Returns the present measurement configuration for `channel`. """
         _val = self.ask("CONF? (@{})".format(self.channel)).strip('\n')
-
 
     # DISPlay subsystem commands
     @property
