@@ -994,7 +994,7 @@ class Agilent34970A(Instrument):
                                        'ss','channel number','alarm threshold',
                                        'alarm number'), v))
     )
-    system_card_reset = Instrument.setting(
+    card_reset = Instrument.setting(
         "SYST:CPON %s",
         """ Resets the module in the specified slot to its power-on state.
             See manual for Factory Reset State for a complete listing of
@@ -1105,12 +1105,12 @@ class Agilent34970A(Instrument):
         _channel = self.ask('ROUT:SCAN?').split('(')[-1].strip('@)\n')
         _channel = _channel.split(',')
 
-        if self._channel == ['']:
+        if _channel == ['']:
             raise AttributeError('The `channel` is not set.')
-        elif len(self._channel) == 1:
-            self._channel = int(self._channel[0])
+        elif len(_channel) == 1:
+            _channel = int(_channel[0])
         else:
-            self._channel = [int(_i) for _i in self._channel]
+            _channel = [int(_i) for _i in _channel]
         return _channel
     @channel.setter
     def channel(self, channel):
@@ -1172,7 +1172,7 @@ class Agilent34970A(Instrument):
 
     # SYSTem subsystem commands
     @property
-    def system_card_identify(self):
+    def card_id(self):
         """ Returns a tuple with the ordered ID strings for
             the cards in the device slots 100, 200, and 300. """
         _val = []
@@ -1186,10 +1186,7 @@ class Agilent34970A(Instrument):
     def configure(self):
         """ Returns the present measurement configuration for `channel`. """
         _val = self.ask("CONF? (@{})".format(self.channel)).strip('\n')
-<<<<<<< HEAD
         return _val
-=======
->>>>>>> 2169635df044503ddbd554cacf89b35c186c7a64
 
     # DISPlay subsystem commands
     @property
@@ -1368,12 +1365,12 @@ class Agilent34970A(Instrument):
         strict_discrete_set(connection, ('RES','FRES'))
         self._resistance_connection = connection
     @property
-    def temperature_connection(self):
+    def temperature_rtd_connection(self):
         """ A string parameter for the RTD resistance measurement connection.
             Values are: `RTD` for 2 wire connections, or `FRTD` for 4 wires. """
         return self._rtd_connection
     @resistance_connection.setter
-    def temperature_connection(self, connection):
+    def temperature_rtd_connection(self, connection):
         """ A string parameter for the RTD resistance measurement connection.
             Values are: `RTD` for 2 wire connections, or `FRTD` for 4 wires. """
         strict_discrete_set(connection, ('RTD','FRTD'))
