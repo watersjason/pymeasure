@@ -1186,10 +1186,7 @@ class Agilent34970A(Instrument):
     def configure(self):
         """ Returns the present measurement configuration for `channel`. """
         _val = self.ask("CONF? (@{})".format(self.channel)).strip('\n')
-<<<<<<< HEAD
         return _val
-=======
->>>>>>> 2169635df044503ddbd554cacf89b35c186c7a64
 
     # DISPlay subsystem commands
     @property
