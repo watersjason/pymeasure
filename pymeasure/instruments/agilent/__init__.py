@@ -31,4 +31,8 @@ from .agilentB2961A import AgilentB2961A
 # from .agilent3458A import Agilent3458A
 from .agilent53131A import Agilent53131A
 from .agilent53131A import Agilent53131A
+<<<<<<< HEAD
 from .agilent34970A import Agilent34970A
+=======
+from .agilent_truevolt import Agilent34470A
+>>>>>>> 2169635df044503ddbd554cacf89b35c186c7a64
