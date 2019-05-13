@@ -65,7 +65,7 @@ class AgilentTruevolt(Instrument):
     terminal_route = Instrument.measurement(
         "ROUT:TERM?",
         """ A string parameter that indicates which terminals
-            are selected for the measurement."""
+            are selected for the measurement.""",
         values={'front':'FRON','rear':'REAR'},
         map_values=True
     )
@@ -79,7 +79,7 @@ class AgilentTruevolt(Instrument):
         "UNIT:TEMP?",
         "UNIT:TEMP %s",
         """ A string parameter for the temperature unit.
-            Input values are: C, F, or K. """
+            Input values are: C, F, or K. """,
         validator=strict_discrete_set,
         values=('C','F','K')
     )
@@ -316,7 +316,7 @@ class AgilentTruevolt(Instrument):
     )
     _configure_current_ac_range = Instrument.setting(
         "CONF:CURR:AC %g",
-        """ TODO """
+        """ TODO """,
         validator=truncated_discrete_set,
         values=(1e-4,1e-3,1e-2,1e-1,1,3,10)
     )
@@ -848,7 +848,7 @@ class AgilentTruevolt(Instrument):
         """ A float parameter for the DC
             voltage aperature integration time / s. """,
         validator=truncated_discrete_set,
-        values=np.arange(2e-4,1,2e-6)
+        values=arange(2e-4,1,2e-6)
     )
     sense_voltage_dc_aperature_enable = Instrument.control(
         "SENS:VOLT:DC:APER:ENAB?",
@@ -888,7 +888,7 @@ class AgilentTruevolt(Instrument):
             voltage secondary measurement. """,
         validator=strict_discrete_set,
         values={'off':          '"OFF"',
-                'no math':      '"CALC:DATA"'
+                'no math':      '"CALC:DATA"',
                 'sense data':   '"SENS:DATA"'},
         map_values=True
     )
@@ -929,7 +929,7 @@ class AgilentTruevolt(Instrument):
         "SYST:ACAL:DATE?",
         """ A list with elements [yyyy, mm, dd].
             The elements represent the year, month and day
-            of the last autocalibration. """
+            of the last autocalibration. """,
         get_process=lambda v:[int(i) for i in v.split(',')]
     )
     autocal_temp = Instrument.measurement(
