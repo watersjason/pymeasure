@@ -31,6 +31,7 @@ from pymeasure.instruments.validators import (truncated_range,
                                               strict_discrete_set,
                                               truncated_discrete_set,
                                               joined_validators, strict_range)
+from pyvisa.errors import Error
 
 class Agilent34970A(Instrument):
     """
@@ -45,7 +46,6 @@ class Agilent34970A(Instrument):
 
     """
     # Default parameters for channels and connection types
-    _channel_io = None
     _resistance_connection = 'FRES'
     _rtd_connection = 'FRTD'
 
@@ -1019,14 +1019,6 @@ class Agilent34970A(Instrument):
         validator = strict_discrete_set,
         values = ('GPIB','RS232')
     )
-    system_command_set = Instrument.control(
-        "SYST:LANG?",
-        "SYST:LANG %s",
-        """ A string parameter that specifies whether the instrument behaves as
-            a `34970A` or `34972A`. """,
-        validator = strict_discrete_set,
-        values = ('34970A', '34972A')
-    )
     system_line_frequency = Instrument.measurement(
         "SYST:LFR?",
         """ Query the current power-line reference frequency used by the
@@ -1041,10 +1033,6 @@ class Agilent34970A(Instrument):
                   'remote': 'REM',
                   'lockout':'RWL'},
         set_process = lambda v: v.casefold()
-    )
-    system_preset = Instrument.setting(
-        "SYST:PRES",
-        """ Put the device in preset configuration. """
     )
     system_time = Instrument.control(
         "SYST:TIME?",
@@ -1140,21 +1128,6 @@ class Agilent34970A(Instrument):
         else:
             raise TypeError('The `channel` must be an integer, float, or a '
                             'list of integers and floats.')
-    @property
-    def channel_io(self):
-        """ The device channel for IO processes. """
-        if self._channel_io is None:
-            raise ValueError('The `channel_io` is not set; values '
-                             'must be set before they can be get. ')
-        else:
-            return self._channel_io
-    @channel_io.setter
-    def channel_io(self, channel):
-        if isinstance(channel, (int,float,list,tuple)):
-            self._channel_io = channel
-        else:
-            raise ValueError('The `channel` must be an int, float,'
-                             ' or a list/tuple of int and float.')
 
     # General device commands
     @property
@@ -1213,7 +1186,7 @@ class Agilent34970A(Instrument):
     def configure(self):
         """ Returns the present measurement configuration for `channel`. """
         _val = self.ask("CONF? (@{})".format(self.channel)).strip('\n')
-
+        return _val
 
     # DISPlay subsystem commands
     @property
@@ -1264,11 +1237,126 @@ class Agilent34970A(Instrument):
         """ Force the device to wait for all pending operations to complete. """
         self.write('*WAI')
 
+    # ROUTe subsystem commands
+    def _channel_check(self, channel, card_name='34903A'):
+        """
+        Checks that the channel is on the card
+        and creates the channel command string.
+
+        Args
+        ----
+        TODO
+
+        Returns
+        -------
+        TODO
+        """
+        channel_str = None
+        card_name = card_name.casefold()
+
+        if isinstance(channel, (int,float)):
+            card_location = [int(str(channel)[0]) - 1]
+            card_id = [self.card_id[card_location[0]].split(',')[1]]
+            channel = [channel]
+            new_id = card_id[0].casefold()
+            if new_id != card_name:
+                raise Error('Card in slot {} is {} not a {} card'.format(
+                    card_location[0]+1, new_id, card_name))
+        else:
+            card_location = []
+            card_id = []
+            for _ in channel:
+                new_location = int(str(_)[0]) - 1
+                card_location = card_location + [new_location]
+                new_id = [self.card_id[new_location].split(',')[1]]
+                card_id = card_id + new_id
+                new_id = new_id[0].casefold()
+                if new_id != card_name:
+                    raise Error('Card in slot {} is {} not a {} card'.format(
+                        card_location[0]+1, new_id, card_name))
+
+        channel_list = dict()
+        for _ in range(0, len(card_id)):
+            chan = channel[_]
+            loc = card_location[_]
+            id = card_id[_]
+
+            # TODO add channel list for other cards
+            if id == '34907A':
+                channel_list[chan] = [(loc + 1) * 100 + _ for _ in
+                                      [1,2,3,4,5]]
+            elif id == '34903A':
+                channel_list[chan] = [(loc + 1) * 100 + _ for _ in
+                                      range(1,21,1)]
+            elif id == '0':
+                raise Error('No card installed in slot.')
+            else:
+                raise Error('{} card is not yet supported. '
+                            'Add to source.'.format(id))
+
+            if chan == (loc + 1) * 100:
+                new_str = (str(min(channel_list[chan])) + ':'
+                           + str(max(channel_list[chan])))
+                if channel_str is None:
+                    channel_str = new_str
+                else:
+                    channel_str = channel_str + ',' + new_str
+            else:
+                strict_discrete_set(chan, channel_list[chan])
+                if channel_str is None:
+                    channel_str = str(chan)
+                else:
+                    channel_str = channel_str + ',' + str(chan)
+
+        return channel_str
+    def relay_state(self, read=True, channel_close=None, channel_open=None):
+        """ TODO """
+        if read in [0,1]:
+            read = bool(read)
+        elif not isinstance(read, bool):
+            raise TypeError(':param read: must be boolean.')
+
+        if read:
+            if channel_close is None and channel_open is None:
+                pass
+            elif channel_close is None:
+                chan = self._channel_check(channel_open)
+                is_open = self.ask("ROUT:OPEN? (@{})".format(chan)).strip('\n')
+                return [bool(_) for _ in is_open.split(',')]
+            elif channel_open is None:
+                chan = self._channel_check(channel_close)
+                is_close = self.ask("ROUT:CLOS? (@{})".format(chan)).strip('\n')
+                return [bool(_) for _ in is_close.split(',')]
+            else:
+                chan_open = self._channel_check(channel_open)
+                chan_close = self._channel_check(channel_close)
+                is_open, is_close = self.ask("ROUT:OPEN? (@{0});:ROUT:CLOS? "
+                                             "(@{1})".format(
+                    chan_open, chan_close)).strip('\n').split(';')
+                return {'opened':[bool(_) for _ in is_open.split(',')],
+                        'closed':[bool(_) for _ in is_close.split(',')]}
+        else:
+            if channel_close is None and channel_open is None:
+                pass
+            elif channel_close is None:
+                chan = self._channel_check(channel_open)
+                self.write("ROUT:OPEN (@{})".format(chan))
+            elif channel_open is None:
+                chan = self._channel_check(channel_close)
+                self.write("ROUT:CLOS (@{})".format(chan))
+            else:
+                chan_open = self._channel_check(channel_open)
+                chan_close = self._channel_check(channel_close)
+                self.write("ROUT:OPEN (@{0});:ROUT:CLOS (@{1})".format(
+                    chan_open, chan_close))
+
     # SENSe subsystem commands
     @property
     def resistance_connection(self):
-        """ A string parameter for the resistance measurement connection type.
-            Values are: `RES` for 2 wire connections, or `FRES` for 4 wires. """
+        """
+        A string parameter for the resistance measurement connection type.
+        Values are: `RES` for 2 wire connections, or `FRES` for 4 wires.
+        """
         return self._resistance_connection
     @resistance_connection.setter
     def resistance_connection(self, connection):
@@ -1319,69 +1407,182 @@ class Agilent34970A(Instrument):
         self.write("SENS:TOT:STOP:IMM")
 
     # SOURce subsystem commands
-    @property
-    def io_word(self):
+    def io_word(self, channel, word=None, array=True):
         """
-        An integer parameter representing the 16 bit word read from or written
-        to `channel_io`.
+        An integer parameter representing the 16 bit :param word: read from or
+        written to :param channel:.
+
+        Args
+        ----
+        :param channel:
+        :param word:    A 16 bit word. If None, the 16 bit word on
+                        :param channel: is read and returned.
+        :param array:   A boolean parameter. If True, returns a big endian
+                        16 bit word array. If False, returns the 16 bit
+                        integer byte sum.
+
+        Returns
+        -------
+        If :param word: is None, a 16 bit word read from
+        :param channel: is returned.
+
+        Raises
+        ------
+        TODO
         """
-        _channel = str(self.channel_io).strip('()[]')
-        if _channel[-1] == '1':
-            return int(self.ask("SOUR:DIG:DATA:WORD? (@{})".format(_channel)))
+        if array in [0,1]:
+            array = bool(array)
+        elif not isinstance(array, bool):
+            raise TypeError(':param array: must be boolean.')
+
+        card_location = int(str(channel)[0]) - 1
+        if self.card_id[card_location].split(',')[1] != '34907A':
+            raise Error('The card for the given :param channel: does'
+                        ' not support reading/writing 16 bit words.')
+
+        channel_location = int(str(channel)[-1])
+        if channel_location != 1:
+            raise ValueError('IO words can only be used with channel x01.')
+
+        channel = str(channel).strip('()[]')
+
+        if word is None:
+            value = self.ask("SENS:DIG:DATA:WORD? (@{})".format(channel))
+            value = int(float(value.strip('\n').strip('+')))
+            if array:
+                return [int(_) for _ in '{0:16b}'.format(value)]
+            else:
+                return int(value)
+        elif isinstance(word, (int,float)) and word in range(0, 65535):
+            pass
+        elif isinstance(word, (list, tuple, range)):
+            if isinstance(word, (tuple, range)):
+                word = list(word)
+            if len(word) == 16:
+                word = int(str(word).strip('[]').replace(', ',''), 2)
+            else:
+                raise ValueError('For iterable values of :param word:'
+                                 ' the length must be 16.')
         else:
-            raise ValueError('IO words can only be read from channel `x01`. '
-                             'Use `io_byte` to read from other channels.')
-    @io_word.setter
-    def io_word(self, word):
-        strict_range(word, (0,65535))
-        _channel = str(self.channel_io).strip('()[]')
-        if _channel[-1] == '1':
-            self.write("SOUR:DIG:DATA:WORD {}, (@{})".format(word, _channel))
-        else:
-            raise ValueError('IO words can only be written to channel `x01`. '
-                             'Use `io_byte` to write to other channels.')
-    @property
-    def io_byte(self):
+            raise ValueError('Value for :param word: is out of range '
+                             'for 16 bit word.')
+
+        self.write("SOUR:DIG:DATA:WORD {0}, (@{1})".format(word, channel))
+    def io_byte(self, channel, byte=None, array=True):
         """
-        An integer (or a list of integer) parameter representing the 8 bit byte
-        read from or written to `channel_io`.
+        An integer parameter representing the 8 bit :param byte: read from
+        or written to :param channel:.
+
+        Args
+        ----
+        :param channel:
+        :param byte:    A 8 bit byte. If None, the 8 bit byte on :param channel:
+                        is read and returned.
+        :param array:   A boolean parameter. If True, returns a big endian
+                        8 bit byte array. If False, returns the
+                        8 bit integer bit sum.
+
+        Returns
+        -------
+        If :param word: is None, a 8 bit byte read from
+        :param channel: is returned.
+
+        Raises
+        ------
+        TODO
         """
-        _channel = str(self.channel_io).strip('()[]')
-        _val = self.ask("SOUR:DIG:DATA:BYTE? (@{})".format(_channel)).split(',')
-        _val = tuple([int(_v) for _v in _val])
-        if len(_val) == 1:
-            return _val[0]
+        if not isinstance(array, bool):
+            raise TypeError(':param array: must be boolean.')
+
+        card_location = int(str(channel)[0]) - 1
+        if self.card_id[card_location].split(',')[1] != '34907A':
+            raise Error('The card for the given :param channel: does'
+                        ' not support reading/writing 8 bit byte.')
+
+        channel_location = int(str(channel)[-1])
+        if channel_location not in [1,2]:
+            raise ValueError('IO bytes can only be used with'
+                             ' channel x01 or x02.')
+
+        channel = str(channel).strip('()[]')
+
+        if byte is None:
+            value = self.ask("SENS:DIG:DATA:BYTE? (@{})".format(channel))
+            value = int(float(value.strip('\n').strip('+')))
+            if array:
+                return [int(_) for _ in '{0:8b}'.format(value)]
+            else:
+                return int(value)
+        elif isinstance(byte, (int,float)) and byte in range(0, 256):
+            pass
+        elif isinstance(byte, (list, tuple, range)):
+            if isinstance(byte, (tuple, range)):
+                byte = list(byte)
+            if len(byte) == 8:
+                byte = int(str(word).strip('[]').replace(', ',''), 2)
+            else:
+                raise ValueError('For iterable values of :param byte:'
+                                 'the length must be 8.')
         else:
-            return _val
-    @io_byte.setter
-    def io_byte(self, byte):
-        strict_range(byte, (0,255))
-        _channel = str(self.channel_io).strip('()[]')
-        self.write("SOUR:DIG:DATA:BYTE {}, (@{})".format(byte, _channel))
+            raise ValueError('Value for :param byte: is out of '
+                             'range for 8 bit byte.')
+
+        self.write("SOUR:DIG:DATA:BYTE {0}, (@{1})".format(byte, channel))
+    def io_state(self, channel):
+        """
+        Queries the state of the IO channel on the 34907A card.
+
+        Args
+        ----
+        channel A integer parameter representing the channel location.
+
+        Returns
+        -------
+        state   A string parameter representing the state of the digital channel
+                specified by :param channel:. Values are: `input` or `output`.
+        """
+
+        if not isinstance(channel, (int,float)):
+            raise ValueError('Value of :param channel: must be'
+                             ' an int or float.')
+
+        card_location = int(str(channel)[0]) - 1
+
+        if self.card_id[card_location].split(',')[1] != '34907A':
+            raise ValueError('The value for :param channel: is not on a'
+                             ' valid IO card'
+                             ' {}'.format(self.card_id[card_location].split(',')[1]))
+
+        channel_loc = int(str(channel)[-1])
+        if channel_loc not in [1,2]:
+            raise ValueError('The value for :param channel: is not a valid'
+                             ' location on the 34907A IO card.')
+
+        value = self.ask("SOUR:DIG:STAT? (@{})".format(channel))
+        if int(value):
+            return 'output'
+        elif not int(value):
+            return 'input'
+        else:
+            raise VisaIOError('Unknown output from device.')
+    def dac_voltage(self, channel, set_point=None):
+        """ Each DAC channel is capable of outputting -12 V to +12 V
+            (resolution 1 mV) at 10 mA max.
+        """
+        channel = str(channel).strip('()[]')
+
+        if set_point is None:
+            value = self.ask("SOUR:VOLT? (@{})".format(channel)).split(',')
+            if len(value) == 1:
+                return float(value[0])
+            else:
+                return tuple([float(_) for _ in value])
+        else:
+            truncated_range(set_point, (-12, 12))
+            self.write("SOUR:VOLT {}, (@{})".format(set_point, channel))
+
+    #SYSTem subsystem commands
     @property
-    def io_state(self):
-        """ Returns the state ('input' or 'output') of the digital channels
-            specified by `channel_io`. """
-        _channel = str(self.channel_io).strip('()[]')
-        _val = self.ask("SOUR:DIG:STAT? (@{})".format(_channel)).split(',')
-        _val = tuple(['output' if int(_v) else 'input' for _v in _val])
-        if len(_val) == 1:
-            return _val[0]
-        else:
-            return _val
-    @property
-    def dac_voltage(self):
-        """ A float parameter for the output voltage level on the DAC
-            specified by `channel_io`. Each DAC channel is capable of
-            outputting -12 V to +12 V (resolution 1 mV) at 10 mA max. """
-        _channel = str(self.channel_io).strip('()[]')
-        _val = self.ask("SOUR:VOLT? (@{})".format(_channel)).split(',')
-        if len(_val) == 1:
-            return float(_val[0])
-        else:
-            return tuple([float(_v) for _v in _val])
-    @dac_voltage.setter
-    def dac_voltage(self, voltage):
-        truncated_range(voltage, (-12, 12))
-        _channel = _channel = str(self.channel_io).strip('()[]')
-        self.write("SOUR:VOLT {}, (@{})".format(voltage, _channel))
+    def system_preset(self):
+        """ Put the device in preset configuration. """
+        self.write("SYST:PRES")
