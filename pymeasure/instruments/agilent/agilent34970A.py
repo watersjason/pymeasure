@@ -1256,30 +1256,30 @@ class Agilent34970A(Instrument):
 
         if isinstance(channel, (int,float)):
             card_location = [int(str(channel)[0]) - 1]
-            card_id = [self.card_id[card_location[0]].split(',')[1]]
+            system_card_identify = [self.system_card_identify[card_location[0]].split(',')[1]]
             channel = [channel]
-            new_id = card_id[0].casefold()
+            new_id = system_card_identify[0].casefold()
             if new_id != card_name:
                 raise Error('Card in slot {} is {} not a {} card'.format(
                     card_location[0]+1, new_id, card_name))
         else:
             card_location = []
-            card_id = []
+            system_card_identify = []
             for _ in channel:
                 new_location = int(str(_)[0]) - 1
                 card_location = card_location + [new_location]
-                new_id = [self.card_id[new_location].split(',')[1]]
-                card_id = card_id + new_id
+                new_id = [self.system_card_identify[new_location].split(',')[1]]
+                system_card_identify = system_card_identify + new_id
                 new_id = new_id[0].casefold()
                 if new_id != card_name:
                     raise Error('Card in slot {} is {} not a {} card'.format(
                         card_location[0]+1, new_id, card_name))
 
         channel_list = dict()
-        for _ in range(0, len(card_id)):
+        for _ in range(0, len(system_card_identify)):
             chan = channel[_]
             loc = card_location[_]
-            id = card_id[_]
+            id = system_card_identify[_]
 
             # TODO add channel list for other cards
             if id == '34907A':
@@ -1436,7 +1436,7 @@ class Agilent34970A(Instrument):
             raise TypeError(':param array: must be boolean.')
 
         card_location = int(str(channel)[0]) - 1
-        if self.card_id[card_location].split(',')[1] != '34907A':
+        if self.system_card_identify[card_location].split(',')[1] != '34907A':
             raise Error('The card for the given :param channel: does'
                         ' not support reading/writing 16 bit words.')
 
@@ -1495,7 +1495,7 @@ class Agilent34970A(Instrument):
             raise TypeError(':param array: must be boolean.')
 
         card_location = int(str(channel)[0]) - 1
-        if self.card_id[card_location].split(',')[1] != '34907A':
+        if self.system_card_identify[card_location].split(',')[1] != '34907A':
             raise Error('The card for the given :param channel: does'
                         ' not support reading/writing 8 bit byte.')
 
@@ -1548,10 +1548,10 @@ class Agilent34970A(Instrument):
 
         card_location = int(str(channel)[0]) - 1
 
-        if self.card_id[card_location].split(',')[1] != '34907A':
+        if self.system_card_identify[card_location].split(',')[1] != '34907A':
             raise ValueError('The value for :param channel: is not on a'
                              ' valid IO card'
-                             ' {}'.format(self.card_id[card_location].split(',')[1]))
+                             ' {}'.format(self.system_card_identify[card_location].split(',')[1]))
 
         channel_loc = int(str(channel)[-1])
         if channel_loc not in [1,2]:
