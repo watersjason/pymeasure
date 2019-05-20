@@ -81,10 +81,11 @@ class AgilentB2961A(Instrument):
 
     device_output_enable = Instrument.control(
         ":OUTP:STAT?",
-        ":OUTP %i",
+        ":OUTP:STAT %i",
         """ A boolean parameter that enables the source output. """,
         validator=strict_discrete_set,
-        values=(True,False)
+        values=(True,False),
+        cast=int
     )
     device_float_enable = Instrument.control(
         ":OUTP:LOW?",
@@ -890,6 +891,8 @@ class AgilentB2961A(Instrument):
         :param output_auto_out_disable:
             A :attr:`~AgilentB2961A.output_auto_out_disable` value.
         """
+        self.disable_source
+        
         self.source_mode=source_mode
         if source_mode is 'current':
             self.current_source_level=source_level
@@ -1095,12 +1098,12 @@ class AgilentB2961A(Instrument):
     @property
     def enable_source(self):
         """ Enables the source output. """
-        self.device_enable = 1
+        self.device_output_enable = 1
 
     @property
     def disable_source(self):
         """ Disables the source output. """
-        self.device_enable = 0
+        self.device_output_enable = 0
 
     @property
     def status_byte(self):
