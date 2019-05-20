@@ -320,6 +320,10 @@ class MettlerToledoBDI(Instrument):
         "Generic Mettler Toledo Bidirectional Data Interface Balance",
         includeSCPI=False,**kwargs)
     @property
+    def calibrate(self):
+        """ Manually intitate the calibration """
+        self.write("CA")
+    @property
     def config_reset_to_defaults(self):
         """ Sets all balance parameters, except for the serial
             interface parameters, to the factory setting.
