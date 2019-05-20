@@ -71,12 +71,9 @@ class Agilent53131A(Instrument):
     # CALibration subsystem
     calibration_self = Instrument.measurement(
         '*CAL?',
-        """ Run an internal interpolator self-calibration. Returns string
-            parameter of ``pass`` or ``fail``. """,
-        validator=strict_discrete_set,
-        values={'pass':0,
-                'fail':1},
-        map_values=True
+        """ Run an internal interpolator self-calibration. Returns `True` if
+            the test fails. """,
+            cast=int
     )
     calibration_count = Instrument.measurement(
         "CAL:COUN?",
@@ -173,7 +170,8 @@ class Agilent53131A(Instrument):
             failure. When `False`, the data collection continues even after
             a failed limit test. """,
         validator=strict_discrete_set,
-        values=(True,False)
+        values=(True,False),
+        cast=bool
     )
     init_continuous = Instrument.control(
         "INIT:CONT?",
@@ -183,7 +181,8 @@ class Agilent53131A(Instrument):
             follows a completed measurement. When ``False``, no new
             measurements are collected.""",
         validator=strict_discrete_set,
-        values=(True,False)
+        values=(True,False),
+        cast=bool
     )
     # INPut subsystem
     input_attenuation = Instrument.control(
@@ -650,17 +649,17 @@ class Agilent53131A(Instrument):
         _values={'POS':True, 'NEG':False}
         return _values[_val]
     # convenience functions
-    def interval_external_ttl(self):
+    @property
+    def interval_external_ttl_timer(self):
         """ Configure the time interval measurement for a 5V TTL signal input on
             channel 1. The interval measurement triggers when the voltage of
-            the input signal reaches 4V and terminates when the signal voltage
-            drops below 2V. """
+            the input signal exceeds 3V and terminates when the signal voltage
+            drops below 1.5V. """
         self.sense_function='time interval'
         self.reference_source_auto=False
         self.reference_source_external=True
         self.reference_external_check='ON'
         #self.measure_function='interval'
-        self.init_continuous=False
         self.sense_common_mode=True
         self.trigger_auto_count_enable=False
 
@@ -670,7 +669,7 @@ class Agilent53131A(Instrument):
         self.trigger_auto_level=False
         self.input_impedance=1e6
         self.input_coupling='DC'
-        self.trigger_level=4
+        self.trigger_level=3
         self.trigger_slope_positive=True
 
         self.channel=2
@@ -679,7 +678,7 @@ class Agilent53131A(Instrument):
         self.trigger_auto_level=False
         self.input_impedance=1e6
         self.input_coupling='DC'
-        self.trigger_level=2
+        self.trigger_level=1.5
         self.trigger_slope_positive=False
 
-        self.init
+        self.init_continuous=True
