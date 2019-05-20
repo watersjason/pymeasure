@@ -321,7 +321,7 @@ class Agilent3458A(Instrument):
             maintains am input resistance of 10e6 Ohms for all ranges. """,
         validator=strict_discrete_set,
         values=(0,1),
-        cast=Int
+        cast=int
     )
     configure_nplc = Instrument.control(
         "NPLC?",
@@ -754,7 +754,7 @@ class Agilent3458A(Instrument):
 
         val = self.values('RMEM {}, {}, {}'.format(start,readings,record))
 
-        self.memory_state = 'continue'
+        self.memory_state = 'cont'
         self.output_eoi = eoi
         return(val)
     # Error
