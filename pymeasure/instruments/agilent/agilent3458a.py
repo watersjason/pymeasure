@@ -612,13 +612,13 @@ class Agilent3458A(Instrument):
         "Agilent 3458A Source-Measurement Unit", includeSCPI=False, **kwargs)
         self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
         self.output_eoi='always'
-        self._math_operations= {'off':       0,
+        self._math_operations= {'off'       :0,
                                 'therm 5k c':2,
-                                'null':      9,
-                                'pass fail': 11,
-                                'stats':     14,
-                                'therm 2k':  16,
-                                'therm 10k': 17,
+                                'null'      :9,
+                                'pass fail' :11,
+                                'stats'     :14,
+                                'therm 2k'  :16,
+                                'therm 10k' :17,
                                 'rtd 85 100':20,
                                 'rtd 92 100':21}
         self._inv_math_operat= {v:k for k,v in self._math_operations.items()}
@@ -694,20 +694,22 @@ class Agilent3458A(Instrument):
             ``'rtd 85 100'``    Measure the t / Celsius of an a=85 100 Ohm PRTD.
             ``'rtd 92 100'``    Measure the t / Celsius of an a=92 100 Ohm PRTD.
         """
-        _val = self.values("MATH?").strip().split(' ')[-1]
-        _val = [int(i) for i in _val.split(',')]
-        return [self._inv_math_operat[i] for i in _val]
+        _val = [int(_) for _ in self.values("MATH?")]
+        return [self._inv_math_operat[_] for _ in _val]
     @configure_math.setter
     def configure_math(self,operation):
 
-        original_operation = self.values("MATH?")
+        original_operation = [int(_) for _ in self.values("MATH?")]
 
-        if operation is None:
+        if operation is 'off':
             self.write("MATH 0,0")
         elif original_operation[0] == 0:
-            self.write("MATH {}".format(self._math_operations[operation]))
+            print(1,"MATH {},0".format(self._math_operations[operation]))
+            self.write("MATH {},0".format(self._math_operations[operation]))
         else:
-            self.write("MATH {},{}".format(original_operation,
+            print(2,"MATH {},{}".format(original_operation[0],
+                                            self._math_operations[operation]))
+            self.write("MATH {},{}".format(original_operation[0],
                                             self._math_operations[operation]))
     # Triggering
     def configure_trigger(self, event, signal=None, n_events=None):
