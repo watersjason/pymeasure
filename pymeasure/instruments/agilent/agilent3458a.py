@@ -704,11 +704,8 @@ class Agilent3458A(Instrument):
         if operation is 'off':
             self.write("MATH 0,0")
         elif original_operation[0] == 0:
-            print(1,"MATH {},0".format(self._math_operations[operation]))
             self.write("MATH {},0".format(self._math_operations[operation]))
         else:
-            print(2,"MATH {},{}".format(original_operation[0],
-                                            self._math_operations[operation]))
             self.write("MATH {},{}".format(original_operation[0],
                                             self._math_operations[operation]))
     # Triggering
