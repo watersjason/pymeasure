@@ -83,7 +83,7 @@ class Keithley6514(Instrument):
         """ Query/set the calculate state. """,
         validator=strict_discrete_set,
         values=(0,1),
-        cast=bool
+        cast=int
     )
     calculate_data=Instrument.measurement(
         "CALC:DATA?",
@@ -130,7 +130,7 @@ class Keithley6514(Instrument):
         When `True`, the front display is enabled.""",
         validator=strict_range,
         values=(0,1),
-        cast=bool
+        cast=int
     )
     # FORMat
     # SENSe
@@ -172,7 +172,7 @@ class Keithley6514(Instrument):
             state of the measurement autorange. """,
         validator=strict_discrete_set,
         values=(0,1),
-        cast=bool
+        cast=int
     )
     voltage_range_auto_upper=Instrument.control(
         ":SENS:VOLT:RANG:AUTO:ULIM?",
@@ -193,7 +193,10 @@ class Keithley6514(Instrument):
     voltage_guard=Instrument.control(
         ":SENS:VOLT:GUAR?",
         ":SENS:VOLT:GUAR %g",
-        """ A boolean parameter for the enabled state of the driven guard. """
+        """ A boolean parameter for the enabled state of the driven guard. """,
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=int
     )
     voltage_external_feedback=Instrument.control(
         ":SENS:VOLT:XFE?",
@@ -201,7 +204,7 @@ class Keithley6514(Instrument):
         """ A boolean parameter for the enabled state of external feedback. """,
         validator=strict_discrete_set,
         values=(0,1),
-        cast=bool
+        cast=int
     )
     sense_average_filter=Instrument.control(
         ":SENS:AVER:TCON?",
@@ -392,9 +395,9 @@ class Keithley6514(Instrument):
         values=(0,1)
     )
 
-    def __init__(self,adapter,**kwargs):
-        super(Keithley6514, self).__init__(adapter,
-                                           "Keithley 6514 Systems Electrometer")
+    def __init__(self, adapter, **kwargs):
+        super(Keithley6514, self).__init__(
+            adapter, "Keithley 6514 Systems Electrometer", **kwargs)
     # CALCulate
     @property
     def calculate_percent_reference_acquire(self):
