@@ -146,7 +146,6 @@ class Agilent3458A(Instrument):
         "TERM?",
         """ A string parameter of ``'FRONT'`` or ``'REAR'`` that designates
             which terminals are selected for signal input. """,
-        validator=strict_discrete_set,
         values={'open': 0,
                 'front':1,
                 'rear': 2},
@@ -469,6 +468,10 @@ class Agilent3458A(Instrument):
                 'upper':13,
                 'pfailnum':15},
         map_values=True
+    )
+    null_value = Instrument.setting(
+        "SMATH OFFSET, %g",
+        """ Set a new value for the DMM null. """
     )
     # Error
     error_mask = Instrument.setting(
