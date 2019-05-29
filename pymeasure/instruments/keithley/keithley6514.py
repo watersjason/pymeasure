@@ -30,6 +30,7 @@ from pymeasure.instruments import Instrument
 from pymeasure.instruments.validators import (strict_range,
                                               strict_discrete_set,
                                               truncated_range)
+from visa import VisaIOError
 
 from .buffer import KeithleyBuffer
 
@@ -114,6 +115,18 @@ class Keithley6514(Instrument):
         "CALC3:DATA?",
         "Query and return the value from the statistics register."
     )
+    # CONFigure
+    configure_measurement=Instrument.control(
+        "CONF?",
+        "CONF:%s",
+        """ Configure the device for a measurement. All controls
+            for the selected measurement are set to the device defaults.
+            Use :param:`read` to get the data. """,
+        validator=strict_discrete_set,
+        values={'voltage':'"VOLT:DC"','current':'"CURR:DC"',
+                'resistance':'"RES"','charge':'"CHAR"'},
+        map_values=True
+    )
     # DISPlay
     display_digits=Instrument.control(
         ":DISP:DIG?",
@@ -133,6 +146,12 @@ class Keithley6514(Instrument):
         cast=int
     )
     # FORMat
+    data_elements=Instrument.measurement(
+        ":FORM:ELEM?",
+        """ Specify the data elements returned for a measurement reading. """,
+        values={'reading':'READ','time':'TIME','status':'STAT'},
+        map_values=True
+    )
     # SENSe
     sense_function=Instrument.control(
         ":SENS:FUNC?",
@@ -140,8 +159,8 @@ class Keithley6514(Instrument):
         """ A string parameter for the device sense function:
             DC `voltage`, DC `current`, `resistance`, or `charge`. """,
         validator=strict_discrete_set,
-        values={'voltage':'VOLT','current':'CURR',
-                'resistance':'RES','charge':'CHAR'},
+        values={'voltage':'"VOLT:DC"','current':'"CURR:DC"',
+                'resistance':'"RES"','charge':'"CHAR"'},
         map_values=True
     )
     sense_latest=Instrument.measurement(
@@ -281,7 +300,8 @@ class Keithley6514(Instrument):
         ":SYST:AZER:STAT %g",
         """ A boolean parameter for the device autozero enable state. """,
         validator=strict_discrete_set,
-        values=(0,1)
+        values=(0,1),
+        cast=int
     )
     error_get_next=Instrument.measurement(
         ":SYST:ERR:NEXT?",
@@ -373,7 +393,7 @@ class Keithley6514(Instrument):
     )
     trig_count=Instrument.control(
         ":TRIG:SEQ1:COUN?",
-        ":TRIG:SEQ1:COUN %g",
+        ":TRIG:SEQ1:COUN %s",
         """ An integer paramter for the TRIG measurement count. The string `INF`
             can be passed for an infinte ARM count. """,
         validator=strict_discrete_set,
@@ -398,12 +418,27 @@ class Keithley6514(Instrument):
     def __init__(self, adapter, **kwargs):
         super(Keithley6514, self).__init__(
             adapter, "Keithley 6514 Systems Electrometer", **kwargs)
+        self.adapter.connection.timeout = kwargs.get('timeout', 10000)
     # CALCulate
     @property
     def calculate_percent_reference_acquire(self):
         """ Use the input signal as the
             :param:`self.calculate_percent_reference` value. """
         self.write("CALC:PERC:ACQ")
+    # READ
+    @property
+    def read(self):
+        """ Trigger and acquire the measurement data.
+            Set the number of measurements returned by
+            :param:`arm_count` and :param:`trig_count`. """
+        elem = self.data_elements
+        val = np.array([float(_) for _ in self.ask('READ?').split(',')])
+        val = val.reshape(int(val.shape[0]/len(elem)), len(elem)).transpose()
+        val = dict(zip(elem, val))
+
+        self.system_local
+
+        return val
     # SYSTem
     @property
     def zero_correct_acquire(self):
@@ -433,6 +468,7 @@ class Keithley6514(Instrument):
     def system_lock(self):
         """ Put device into or out of local lockout. """
         self.write(":SYST:RWL")
+    # TRIGger
     @property
     def data_clear_all(self):
         """ Clear all readings from the trigger/data buffer. """
@@ -449,3 +485,12 @@ class Keithley6514(Instrument):
     def trig_clear(self):
         """ Immediately clears the input triggers. """
         self.write(':TRIG:CLE')
+
+    @property
+    def timeout(self):
+        """ The VISA IO time out in milliseconds """
+        return self.adapter.connection.timeout
+    @timeout.setter
+    def timeout(self, timeout):
+        """ The VISA IO time out in milliseconds """
+        self.adapter.connection.timeout = timeout
