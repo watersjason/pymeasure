@@ -313,7 +313,6 @@ class Keithley6514(Instrument):
         ":DATA:FEED %s",
         """ A string parameter for source of readings to the buffer. """,
         validator=strict_discrete_set,
-        values={'sense':'SENS1','calculate','CALC1','calculate2':'CALC2'},
         values={'sense':'SENS1','calculate':'CALC1','calculate2':'CALC2'},
         map_values=True
     )
