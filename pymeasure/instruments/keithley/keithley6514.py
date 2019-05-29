@@ -294,14 +294,46 @@ class Keithley6514(Instrument):
             of error/status codes in the register. """
     )
     # TRACe
-    data_get
-    data_clear_all
-    data_free_space
-    data_points
-    data_points_actual
-    data_source
-    data_source_control
-    timestamp_format
+    data_get=Instrument.measurement(
+        ":DATA:DATA?",
+        """ Read the contents of the trace/data buffer. """
+    )
+    data_points=Instrument.control(
+        ":DATA:POIN?",
+        ":DATA:POIN %g",
+        """ An integer parameter for the size of the query buffer. """
+    )
+    data_points_actual=Instrument.measurement(
+        ":DATA:POIN:ACT?",
+        """ An integer parameter for the actual number of
+            readings stored in the trigger/data buffer. """
+    )
+    data_source=instrument.control(
+        ":DATA:FEED?",
+        ":DATA:FEED %s",
+        """ A string parameter for source of readings to the buffer. """,
+        validator=strict_discrete_set,
+        values={'sense':'SENS1','calculate','CALC1','calculate2':'CALC2'},
+        map_values=True
+    )
+    data_source_control=Instrument.control(
+        ":DATA:FEED:CONT?",
+        ":DATA:FEED:CONT %s",
+        """ A string parameter for the data source feed.
+            Values are: `next` or `never`.""",
+        validator=strict_discrete_set,
+        values={'next':'NEX','never':'NEV'},
+        map_values=True
+    )
+    timestamp_format=Instrument.control(
+        ":DATA:TST:FORM?",
+        ":DATA:TST:FORM %s",
+        """ A string paramter for the timestamp format.
+            Values are `absolute` or `relative`. """,
+        validator=strict_discrete_set,
+        values={'absolute':'ABS','relative':'REL'},
+        map_values=True
+    )
     # TRIGger
     trig_init
     trig_abort
@@ -352,3 +384,7 @@ class Keithley6514(Instrument):
     def system_lock(self):
         """ Put device into or out of local lockout. """
         self.write(":SYST:RWL")
+    @property
+    def data_clear_all(self):
+        """ Clear all readings from the trigger/data buffer. """
+        self.write(":DATA:CLE")
