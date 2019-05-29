@@ -359,11 +359,38 @@ class Keithley6514(Instrument):
         validator=truncated_range,
         values=(0.001,99999.999)
     )
-    trig_source
-    trig_count
-    trig_delay
-    trig_delay_auto_enable
-    trig_clear
+    trig_source=Instrument.control(
+        ":TRIG:SEQ1:SOUR?",
+        ":TRIG:SEQ1:SOUR %s",
+        """ A string parameter for the Trigger control source.
+            Values are: `immediate` or `link`. """,
+        validator=strict_discrete_set,
+        values={'immediate':'IMM','link':'TLIN'},
+        map_values=True
+    )
+    trig_count=Instrument.control(
+        ":TRIG:SEQ1:COUN?",
+        ":TRIG:SEQ1:COUN %g",
+        """ An integer paramter for the TRIG measurement count. The string `INF`
+            can be passed for an infinte ARM count. """,
+        validator=strict_discrete_set,
+        values=list(range(1,2501,1))+['INF']
+    )
+    trig_delay=Instrument.control(
+        ":TRIG:SEQ1:DEL?",
+        ":TRIG:SEQ1:DEL %g",
+        """ A float parameter for the trigger delay in seconds. """,
+        validator=strict_range,
+        values=(0,999.9999)
+    )
+    trig_delay_auto_enable=Instrument.control(
+        ":TRIG:SEQ1:DEL:AUTO?",
+        ":TRIG:SEQ1:DEL:AUTO %g",
+        """ A boolean parameter for the enabled
+            state of the trigger auto-delay. """,
+        validator=strict_discrete_set,
+        values=(0,1)
+    )
 
     def __init__(self,adapter,**kwargs):
         super(Keithley6514, self).__init__(adapter,
@@ -415,3 +442,7 @@ class Keithley6514(Instrument):
     def trig_reset(self):
         """ Reset trigger system to idle state. """
         self.write(":ABOR")
+    @property
+    def trig_clear(self):
+        """ Immediately clears the input triggers. """
+        self.write(':TRIG:CLE')
