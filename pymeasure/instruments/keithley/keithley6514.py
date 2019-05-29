@@ -203,7 +203,7 @@ class Keithley6514(Instrument):
         values=(0,1),
         cast=bool
     )
-    source_average_filter=Instrument.control(
+    sense_average_filter=Instrument.control(
         ":SENS:AVER:TCON?",
         ":SENS:AVER:TONC %s",
         """ A string parameter for the digital filter control. Values are:
@@ -212,7 +212,7 @@ class Keithley6514(Instrument):
         values={'moving':'MOV','repeating','REP'},
         map_values=True
     )
-    source_average_count=Instrument.control(
+    sense_average_count=Instrument.control(
         ":SENS:AVER:COUN?",
         ":SENS:AVER:COUN %g",
         """ An integer parameter for the number of
@@ -221,7 +221,7 @@ class Keithley6514(Instrument):
         values=list((range(2,101,1))),
         cast=int
     )
-    source_average_enable=Instrument.control(
+    sense_average_enable=Instrument.control(
         ":SENS:AVER:STAT?",
         ":SENS:AVER:STAT %g",
         """A boolean parameter for the enabled state of the average filter.""",
@@ -229,7 +229,7 @@ class Keithley6514(Instrument):
         values=(0,1),
         cast=int
     )
-    source_median_rank=Instrument.control(
+    sense_median_rank=Instrument.control(
         ":SENS:MED:RANK?",
         ":SENS:MED:RANK %g",
         """ An integer parameter for the median filter rank. """,
@@ -237,7 +237,7 @@ class Keithley6514(Instrument):
         values=(1,5),
         cast=int
     )
-    source_median_enable=Instrument.control(
+    sense_median_enable=Instrument.control(
         ":SENS:MED:STAT?",
         ":SENS:MED:STAT %g",
         """A boolean parameter for the enabled state of the median filter.""",
@@ -248,8 +248,71 @@ class Keithley6514(Instrument):
     # SOURce
     # STATus
     # SYSTem
+    zero_check_enable=Instrument.control(
+        ":SYST:ZCH?",
+        ":SYST:ZCH %g",
+        """ A boolean parameter for the enabled state
+            of the device zero check. """,
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=int
+    )
+    zero_correct_enable=Instrument.control(
+        ":SYST:ZCOR?",
+        ":SYST:ZCOR %g",
+        """ A boolean parameter for the enabled state
+            of the device zero correct. """,
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=int
+    )
+    power_line_freq=Instrument.control(
+        ":SYST:LFR?",
+        ":SYST:LFR %g",
+        """ An integer parameter for the power line frequency (Hz). """,
+        validator=strict_discrete_set,
+        values=(50,60)
+    )
+    auto_zero_enable=Instrument.control(
+        ":SYST:AZER:STAT?",
+        ":SYST:AZER:STAT %g",
+        """ A boolean parameter for the device autozero enable state. """,
+        validator=strict_discrete_set,
+        values=(0,1)
+    )
+    error_get_next=Instrument.measurement(
+        ":SYST:ERR:NEXT?",
+        """ Read and clear the oldest error/status code """
+    )
+    error_get_all=Instrument.measurement(
+        ":SYST:ERR:ALL?",
+        """ Read and clear all error/status codes """
+    )
+    error_count=Instrument.measurement(
+        ":SYST:ERR:COUN?",
+        """ An integer parameter for the number
+            of error/status codes in the register. """
+    )
     # TRACe
+    data_get
+    data_clear_all
+    data_free_space
+    data_points
+    data_points_actual
+    data_source
+    data_source_control
+    timestamp_format
     # TRIGger
+    trig_init
+    trig_abort
+    arm_source
+    arm_count
+    arm_timer
+    trig_source
+    trig_count
+    trig_delay
+    trig_delay_auto_enable
+    trig_clear
 
     def __init__(self,adapter,**kwargs):
         super(Keithley6514, self).__init__(adapter,
@@ -260,3 +323,32 @@ class Keithley6514(Instrument):
         """ Use the input signal as the
             :param:`self.calculate_percent_reference` value. """
         self.write("CALC:PERC:ACQ")
+    # SYSTem
+    @property
+    def zero_correct_acquire(self):
+        """ Acquire a new value for the zero correct. """
+        self.write(":SYST:ZCOR:ACQ")
+    @property
+    def preset_restore(self):
+        """ Reset the device to default state. """
+        self.write(":SYST:PRES")
+    @property
+    def timestamp_reset(self):
+        """ Reset the timestamp to 0 seconds. """
+        self.write(":SYST:TIME:RES")
+    @property
+    def error_clear_all(self):
+        """ Clear all error/status messages """
+        self.write(":SYST:ERR:CLE")
+    @property
+    def system_local(self):
+        """ Take device out of remote mode. """
+        self.write(":SYST:LOC")
+    @property
+    def system_remote(self):
+        """ Put device into remote mode. """
+        self.write(":SYST:REM")
+    @property
+    def system_lock(self):
+        """ Put device into or out of local lockout. """
+        self.write(":SYST:RWL")
