@@ -29,8 +29,7 @@ log.addHandler(logging.NullHandler())
 from pymeasure.instruments import Instrument
 from pymeasure.instruments.validators import (strict_range,
                                               strict_discrete_set,
-                                              truncated_range,
-                                              joined_validator)
+                                              truncated_range)
 
 from .buffer import KeithleyBuffer
 
@@ -210,7 +209,7 @@ class Keithley6514(Instrument):
         """ A string parameter for the digital filter control. Values are:
             `moving` or `repeating`. """,
         validator=strict_discrete_set,
-        values={'moving':'MOV','repeating','REP'},
+        values={'moving':'MOV','repeating':'REP'},
         map_values=True
     )
     sense_average_count=Instrument.control(
@@ -309,12 +308,13 @@ class Keithley6514(Instrument):
         """ An integer parameter for the actual number of
             readings stored in the trigger/data buffer. """
     )
-    data_source=instrument.control(
+    data_source=Instrument.control(
         ":DATA:FEED?",
         ":DATA:FEED %s",
         """ A string parameter for source of readings to the buffer. """,
         validator=strict_discrete_set,
         values={'sense':'SENS1','calculate','CALC1','calculate2':'CALC2'},
+        values={'sense':'SENS1','calculate':'CALC1','calculate2':'CALC2'},
         map_values=True
     )
     data_source_control=Instrument.control(
