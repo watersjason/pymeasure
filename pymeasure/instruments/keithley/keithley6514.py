@@ -192,7 +192,7 @@ class Keithley6514(Instrument):
     )
     voltage_guard=Instrument.control(
         ":SENS:VOLT:GUAR?",
-        ":SENS:VOLT:GUAR %s",
+        ":SENS:VOLT:GUAR %g",
         """ A boolean parameter for the enabled state of the driven guard. """
     )
     voltage_external_feedback=Instrument.control(
@@ -202,6 +202,48 @@ class Keithley6514(Instrument):
         validator=strict_discrete_set,
         values=(0,1),
         cast=bool
+    )
+    source_average_filter=Instrument.control(
+        ":SENS:AVER:TCON?",
+        ":SENS:AVER:TONC %s",
+        """ A string parameter for the digital filter control. Values are:
+            `moving` or `repeating`. """,
+        validator=strict_discrete_set,
+        values={'moving':'MOV','repeating','REP'},
+        map_values=True
+    )
+    source_average_count=Instrument.control(
+        ":SENS:AVER:COUN?",
+        ":SENS:AVER:COUN %g",
+        """ An integer parameter for the number of
+            points averaged in the filter.""",
+        validator=strict_discrete_set,
+        values=list((range(2,101,1))),
+        cast=int
+    )
+    source_average_enable=Instrument.control(
+        ":SENS:AVER:STAT?",
+        ":SENS:AVER:STAT %g",
+        """A boolean parameter for the enabled state of the average filter.""",
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=int
+    )
+    source_median_rank=Instrument.control(
+        ":SENS:MED:RANK?",
+        ":SENS:MED:RANK %g",
+        """ An integer parameter for the median filter rank. """,
+        validator=truncated_range,
+        values=(1,5),
+        cast=int
+    )
+    source_median_enable=Instrument.control(
+        ":SENS:MED:STAT?",
+        ":SENS:MED:STAT %g",
+        """A boolean parameter for the enabled state of the median filter.""",
+        validator=strict_discrete_set,
+        values=(0,1),
+        cast=int
     )
     # SOURce
     # STATus
