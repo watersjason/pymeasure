@@ -29,7 +29,8 @@ log.addHandler(logging.NullHandler())
 from pymeasure.instruments import Instrument
 from pymeasure.instruments.validators import (strict_range,
                                               strict_discrete_set,
-                                              truncated_range)
+                                              truncated_range,
+                                              joined_validator)
 
 from .buffer import KeithleyBuffer
 
@@ -335,11 +336,30 @@ class Keithley6514(Instrument):
         map_values=True
     )
     # TRIGger
-    trig_init
-    trig_abort
-    arm_source
-    arm_count
-    arm_timer
+    arm_source=Instrument.control(
+        ":ARM:LAY1:SOUR?",
+        ":ARM:LAY1:SOUR %s",
+        """ Select the ARM control source.
+            Values are `immediate`, `timer`, `bus`, `manual`.""",
+        validator=strict_discrete_set,
+        values={'immediate':'IMM','timer':'TIM','bus':'BUS','manual':'MAN'},
+        map_values=True
+    )
+    arm_count=Instrument.control(
+        ":ARM:LAY1:COUN?",
+        ":ARM:LAY1:COUN %s",
+        """ An integer paramter for the ARM measurement count. The string `INF`
+            can be passed for an infinte ARM count. """,
+        validator=strict_discrete_set,
+        values=list(range(1,2501,1))+['INF']
+    )
+    arm_timer=Instrument.control(
+        ":ARM:LAY1:TIM?",
+        ":ARM:LAY1:TIM %g",
+        """ A float parameter for the ARM DELAY timer. """,
+        validator=truncated_range,
+        values=(0.001,99999.999)
+    )
     trig_source
     trig_count
     trig_delay
@@ -388,3 +408,11 @@ class Keithley6514(Instrument):
     def data_clear_all(self):
         """ Clear all readings from the trigger/data buffer. """
         self.write(":DATA:CLE")
+    @property
+    def trig_init(self):
+        """ Immediately initiate one trigger cycle. """
+        self.write(":INIT:IMM")
+    @property
+    def trig_reset(self):
+        """ Reset trigger system to idle state. """
+        self.write(":ABOR")
