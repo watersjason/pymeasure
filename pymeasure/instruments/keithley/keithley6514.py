@@ -431,7 +431,11 @@ class Keithley6514(Instrument):
     def read(self):
         """ Trigger and acquire the measurement data.
             Set the number of measurements returned by
-            :param:`arm_count` and :param:`trig_count`. """
+            :param:`arm_count` and :param:`trig_count`.
+
+            Returns all data output by the device. See
+            :param:`data_elements` for output parameters.
+        """
         elem = self.data_elements
         val = np.array([float(_) for _ in self.ask('READ?').split(',')])
         val = val.reshape(int(val.shape[0]/len(elem)), len(elem)).transpose()
@@ -440,6 +444,15 @@ class Keithley6514(Instrument):
         self.system_local
 
         return val
+    @property
+    def read_function(self):
+        """ Trigger and acquire the measurement data.
+            Set the number of measurements returned by
+            :param:`arm_count` and :param:`trig_count`.
+
+            Returns only the data set by :param:`sense_function`
+        """
+        return read['READ']
     # SYSTem
     @property
     def zero_correct_acquire(self):
