@@ -352,9 +352,10 @@ class Keithley6514(Instrument):
         ":DATA:TST:FORM?",
         ":DATA:TST:FORM %s",
         """ A string paramter for the timestamp format.
-            Values are `absolute` or `relative`. """,
+            Values are `absolute` or `delta`. """,
         validator=strict_discrete_set,
-        values={'absolute':'ABS','relative':'REL'},
+        values={'absolute':'ABS',
+                'delta':'DEL'},
         map_values=True
     )
     # TRIGger
