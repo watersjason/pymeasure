@@ -355,7 +355,7 @@ class Keithley6514(Instrument):
             Values are `absolute` or `delta`. """,
         validator=strict_discrete_set,
         values={'absolute':'ABS',
-                'delta':'DEL'},
+                'delta':'DELT'},
         map_values=True
     )
     # TRIGger
@@ -438,10 +438,13 @@ class Keithley6514(Instrument):
         """
         elem = self.data_elements
         val = np.array([float(_) for _ in self.ask('READ?').split(',')])
-        val = val.reshape(int(val.shape[0]/len(elem)), len(elem)).transpose()
-        val = dict(zip(elem, val))
-
         self.system_local
+
+        val = val.reshape(int(val.shape[0]/len(elem)), len(elem)).transpose()
+        if np.abs(val[0][0]) > (np.abs(np.mean(val[0][1:]))
+                                + 3 * np.abs(np.std(val[0][1:]))):
+            val = np.delete(val, 0, 1)
+        val = dict(zip(elem, val))
 
         return val
     @property
@@ -452,7 +455,7 @@ class Keithley6514(Instrument):
 
             Returns only the data set by :param:`sense_function`
         """
-        return read['READ']
+        return self.read['READ']
     # SYSTem
     @property
     def zero_correct_acquire(self):
