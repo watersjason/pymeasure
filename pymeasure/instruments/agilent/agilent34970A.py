@@ -1468,6 +1468,11 @@ class Agilent34970A(Instrument):
                              'for 16 bit word.')
 
         self.write("SOUR:DIG:DATA:WORD {0}, (@{1})".format(word, channel))
+    def io_read_byte_array(self, channel):
+        """ TODO """
+        value = self.ask("SENS:DIG:DATA:BYTE? (@{})".format(channel))
+        value = int(float(value.strip('\n').strip('+')))
+        return [int(_) for _ in '{0:8b}'.format(value)]
     def io_byte(self, channel, byte=None, array=True):
         """
         An integer parameter representing the 8 bit :param byte: read from
