@@ -189,6 +189,8 @@ class MettlerToledoSICS(Instrument):
         includeSCPI=False, **kwargs
         )
 
+        self.adapter.connection.timeout = kwargs.get('timeout', 60000)
+
         self._cal_mode_val_set= {'manual':0,
                                  'auto':1}
         self._cal_mode_val_get=self._flip_dict(self._cal_mode_val_set)
@@ -297,19 +299,19 @@ class MettlerToledoSICS(Instrument):
         return self._checker("I4")
     @device_software_id.getter
     def device_software_id(self):
-        return _checker("I5")
+        return self._checker("I5")
     @send_stable.getter
     def send_stable(self):
-        return _checker("S")
+        return self._checker("S")[0]
     @send_immediate.getter
     def send_immediate(self):
-        return _checker("SI")
+        return self._checker("SI")[0]
     @zero_stable.getter
     def zero_stable(self):
-        return _checker("Z")
+        return self._checker("Z")[0]
     @zero_immediate.getter
     def zero_immediate(self):
-        return _checker("ZI")
+        return self._checker("ZI")[0]
     @property
     def reset(self):
         "Reset balance without zeroing."
@@ -324,7 +326,7 @@ class MettlerToledoSICS(Instrument):
         return self._checker("DW")
     @tare_stable.getter
     def tare_stable(self):
-        return self._checker("T")
+        return self._checker("T")[0]
     @tare_value.setter
     def tare_value(self,value_unit):
         try:
@@ -347,6 +349,9 @@ class MettlerToledoSICS(Instrument):
     def tare_immediate(self):
         return self._checker("TI")
     # Level 3 properties
+    @property
+    def calibrate(self):
+        self.write("CA")
     @calibration_mode.setter
     def calibration_mode(self, mode_weight):
         try:
