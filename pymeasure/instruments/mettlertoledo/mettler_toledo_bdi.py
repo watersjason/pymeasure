@@ -44,10 +44,8 @@ class MettlerToledoBDI(Instrument):
             the automatic draft shield operation.
         """,
         validator=strict_discrete_set,
-        values={"on":"1",
-                "off":"0"},
-        map_values=True,
-        get_process=lambda v:v.split("=")[-1]
+        values=(0,1),
+        cast=bool
     )
     weight_offset_value=Instrument.setting(
         "B %f",
@@ -319,6 +317,8 @@ class MettlerToledoBDI(Instrument):
         super(MettlerToledoBDI, self).__init__(adapter,
         "Generic Mettler Toledo Bidirectional Data Interface Balance",
         includeSCPI=False,**kwargs)
+
+        self.adapter.connection.timeout = kwargs.get('timeout', 60000)
     @property
     def calibrate(self):
         """ Manually intitate the calibration """
