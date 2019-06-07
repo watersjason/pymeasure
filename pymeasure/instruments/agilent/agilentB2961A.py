@@ -836,8 +836,8 @@ class AgilentB2961A(Instrument):
                           trigger_delay=0, trigger_period=1,
                           trigger_signal='auto', arm_count='min',
                           arm_delay=0, arm_period='default',
-                          arm_signal='auto', output_off_mode='normal',
-                          output_auto_out_enable=1, output_auto_out_disable=0):
+                          arm_signal='auto', output_off_mode='high impedance',
+                          output_auto_out_enable=0, output_auto_out_disable=0):
         """ A convenience function to configure the device for
             triggering a source-measure event and the measurement
             data collected in the buffer.
@@ -892,7 +892,7 @@ class AgilentB2961A(Instrument):
             A :attr:`~AgilentB2961A.output_auto_out_disable` value.
         """
         self.disable_source
-        
+
         self.source_mode=source_mode
         if source_mode is 'current':
             self.current_source_level=source_level
