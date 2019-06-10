@@ -194,9 +194,10 @@ class MettlerToledoSICS(Instrument):
         self._cal_mode_val_set= {'manual':0,
                                  'auto':1}
         self._cal_mode_val_get=self._flip_dict(self._cal_mode_val_set)
+
         self._cal_weight_val_set=   {'internal':0,
                                      'external':1}
-        self._cal_weight_val_get=self._flip_dict(self._cal_mode_val_set)
+        self._cal_weight_val_get=self._flip_dict(self._cal_weight_val_set)
 
         self._door_get_states=  {0:'close',
                                  1:'open',
@@ -208,8 +209,8 @@ class MettlerToledoSICS(Instrument):
                                  'left':2}
 
         self._weighing_mode_set_val= {'normal':0,
-                                 'dosing':1,
-                                 'other': 2}
+                                      'dosing':1,
+                                      'other': 2}
         self._weighing_mode_get_val=self._flip_dict(
                                                 self._weighing_mode_set_val)
         self._weighing_environment_set_val= {'very stable':  0,
@@ -349,9 +350,6 @@ class MettlerToledoSICS(Instrument):
     def tare_immediate(self):
         return self._checker("TI")
     # Level 3 properties
-    @property
-    def calibrate(self):
-        self.write("CA")
     @calibration_mode.setter
     def calibration_mode(self, mode_weight):
         try:
@@ -360,25 +358,26 @@ class MettlerToledoSICS(Instrument):
             raise ValueError('An interable with values for the mode and '
                              'calibration weight must be passed.')
 
-        strict_discrete_set(mode, list(self._cal_mode_val.keys()))
-        strict_discrete_set(weight, list(self._cal_weight_val.keys()))
+        strict_discrete_set(mode, list(self._cal_mode_val_set.keys()))
+        strict_discrete_set(weight, list(self._cal_weight_val_set.keys()))
 
-        return self._checker("C0 {} {}".format(self._cal_mode_val[mode],
-                                               self._cal_weight_val[weight]))
+        return self._checker("C0 {} {}".format(self._cal_mode_val_set[mode],
+                                               self._cal_weight_val_set[weight])
+                             )
     @calibration_mode.getter
     def calibration_mode(self):
-        _arg=self._checker("C0")
+        arg=self._checker("C0")
 
-        if len(_arg)==5:
-            _mode=int(_arg[-3])
-            _weight=int(_arg[-2])
-        elif len(_arg)==6:
-            _mode=int(_arg[-4])
-            _weight=int(_arg[-3])
+        if len(arg) == 5:
+            mode   = int(arg[-3])
+            weight = int(arg[-2])
+        elif len(arg) == 6:
+            mode   = int(arg[-4])
+            weight = int(arg[-3])
         else:
             raise ValueError('TODO')
 
-        return self._cal_mode_val_get[_mode], self._cal_weight_val_get[_weight]
+        return self._cal_mode_val_get[mode], self._cal_weight_val_get[weight]
     @property
     def calibration_internal(self):
         """ Initiate an internal calibration. """
@@ -499,7 +498,15 @@ class MettlerToledoSICS(Instrument):
         return self._weighing_resolution_get_val[int(self._checker("M23")[-1])]
     @calibration_history.getter
     def calibration_history(self):
-        return self._checker("M27")
+        keys = ('command', 'status', 'number', 'date', 'month', 'year', 'hour',
+                'minute','second','mode')
+        reply = self._checker("M27")
+        out = []
+        for _ in reply:
+            if len(_) == 10:
+                out = out + [dict(zip(keys,_))]
+        return out
+
     @temperature.getter
     def temperature(self):
         return [float(i) for i in array(self._checker("M28"))[:,-1]]
