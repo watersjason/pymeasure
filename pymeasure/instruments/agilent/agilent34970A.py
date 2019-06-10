@@ -1168,7 +1168,9 @@ class Agilent34970A(Instrument):
         if len(state_code) is not 2:
             raise TypeError('The `state_code` must have a length of 2.')
         strict_discrete_set(state_code[0], (True,False))
-        self.write("CAL:SEC:STAT {0:d}, {1}".format(*state_code))
+        cmd = "CAL:SECURE:STATE {0:d}, {1}".format(*state_code)
+        print(cmd)
+        self.write(cmd)
 
     # SYSTem subsystem commands
     @property
