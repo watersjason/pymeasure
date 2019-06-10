@@ -384,7 +384,8 @@ class Agilent53131A(Instrument):
             the source is determined by
             :attr:`~.Agilent53131A.reference_source_external`.""",
         validator=strict_discrete_set,
-        values=(True,False)
+        values=(True,False),
+        cast=bool
     )
     # SENSe:TINTerval subtree - commands partially supported
     interval_start_arm_slope_positive = Instrument.control(
