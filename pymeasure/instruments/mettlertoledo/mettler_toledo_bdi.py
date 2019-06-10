@@ -40,12 +40,12 @@ class MettlerToledoBDI(Instrument):
     door_auto_mode=Instrument.control(
         "AD ?",
         "AD %i",
-        """ A string parameter that enables or disables
+        """ A boolean parameter that enables or disables
             the automatic draft shield operation.
         """,
         validator=strict_discrete_set,
         values=(0,1),
-        cast=bool
+        get_process = lambda cmd: int(cmd.strip().split('=')[-1])
     )
     weight_offset_value=Instrument.setting(
         "B %f",
@@ -75,10 +75,12 @@ class MettlerToledoBDI(Instrument):
             current calibration status.
         """,
         values={"idle":"CA=I",
-                "waiting":"CA=W",
-                "auto calibrate":"CA=CA",
-                "manual calibrate":"CA=CX",
-                "test running":"CA=CT"},
+                "waiting to calibrate":"CA=W",
+                "running auto calibration":"CA=CA",
+                "running user calibration":"CA=CX",
+                "running calibration":"CA=CT",
+                "completing calibration":"CAL END",
+                "starting calibration":"CAL BEGIN"},
         map_values=True
     )
     config_unlock=Instrument.control(
