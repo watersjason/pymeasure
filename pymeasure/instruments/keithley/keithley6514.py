@@ -118,14 +118,15 @@ class Keithley6514(Instrument):
     # CONFigure
     configure_measurement=Instrument.control(
         "CONF?",
-        "CONF:%s",
+        "CONF %s",
         """ Configure the device for a measurement. All controls
             for the selected measurement are set to the device defaults.
             Use :param:`read` to get the data. """,
         validator=strict_discrete_set,
-        values={'voltage':'"VOLT:DC"','current':'"CURR:DC"',
-                'resistance':'"RES"','charge':'"CHAR"'},
-        map_values=True
+        values={'voltage':'VOLT:DC','current':'CURR:DC',
+                'resistance':'RES','charge':'CHAR'},
+        map_values=True,
+        get_process = lambda v: v.strip('" "\n')
     )
     # DISPlay
     display_digits=Instrument.control(
