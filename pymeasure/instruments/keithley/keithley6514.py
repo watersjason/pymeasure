@@ -118,7 +118,7 @@ class Keithley6514(Instrument):
     # CONFigure
     configure_measurement=Instrument.control(
         "CONF?",
-        "CONF %s",
+        "CONF:%s",
         """ Configure the device for a measurement. All controls
             for the selected measurement are set to the device defaults.
             Use :param:`read` to get the data. """,
