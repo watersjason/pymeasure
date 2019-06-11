@@ -348,14 +348,15 @@ class Keithley6514(Instrument):
         values={'next':'NEX','never':'NEV'},
         map_values=True
     )
-    timestamp_format=Instrument.control(
+    timestamp_relative=Instrument.control(
         ":DATA:TST:FORM?",
         ":DATA:TST:FORM %s",
-        """ A string paramter for the timestamp format.
-            Values are `absolute` or `delta`. """,
+        """ A boolean paramter for the timestamp format.
+            If True, the time stamp is relative.
+            If False, the time stamp is absolute. """,
         validator=strict_discrete_set,
-        values={'absolute':'ABS',
-                'delta':'DELT'},
+        values={0:'ABS',
+                1:'DELT'},
         map_values=True
     )
     # TRIGger
@@ -437,15 +438,17 @@ class Keithley6514(Instrument):
             :param:`data_elements` for output parameters.
         """
         elem = self.data_elements
+
         val = np.array([float(_) for _ in self.ask('READ?').split(',')])
         self.system_local
 
-        val = val.reshape(int(val.shape[0]/len(elem)), len(elem)).transpose()
-        if np.abs(val[0][0]) > (np.abs(np.mean(val[0][1:]))
-                                + 3 * np.abs(np.std(val[0][1:]))):
-            val = np.delete(val, 0, 1)
-        val = dict(zip(elem, val))
+        val = val.reshape(-1,3)
 
+        # bound = np.abs(np.mean(val[0][1:])) + 3 * np.std(val[0][1:])
+        # if np.abs(val[0][0]) > bound or np.abs(val[0][0]) < bound:
+            # val = np.delete(val, 0, 1)
+
+        val = dict(zip(elem, val.transpose()))
         return val
     @property
     def read_function(self):
