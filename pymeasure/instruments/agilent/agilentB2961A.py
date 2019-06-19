@@ -101,7 +101,8 @@ class AgilentB2961A(Instrument):
     )
     device_calibrate = Instrument.measurement(
         "*CAL?",
-        """ A query command to perform the self-calibration. """
+        """ A query command to perform the self-calibration. """,
+        cast = bool
     )
     device_test = Instrument.measurement(
         "*TST?",
