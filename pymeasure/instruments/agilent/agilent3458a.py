@@ -149,8 +149,7 @@ class Agilent3458A(Instrument):
         values={'open': 0,
                 'front':1,
                 'rear': 2},
-        map_values=True,
-        get_process=lambda v: int(v.split('\r\n')[0])
+        map_values=True
     )
     output_eoi = Instrument.control(
         "END?",
