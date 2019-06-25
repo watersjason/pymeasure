@@ -612,9 +612,7 @@ class Agilent3458A(Instrument):
 
     def __init__(self, adapter, **kwargs):
         super(Agilent3458A, self).__init__(adapter,
-        "Agilent 3458A Source-Measurement Unit", includeSCPI=False, **kwargs)
-        self.adapter.connection.timeout = (kwargs.get('timeout', 5) * 1000)
-        self.output_eoi='always'
+        "Agilent 3458A Digital Multimeter", includeSCPI=False, **kwargs)
         self._math_operations= {'off'       :0,
                                 'therm 5k c':2,
                                 'null'      :9,
