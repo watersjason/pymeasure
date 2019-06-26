@@ -136,7 +136,7 @@ class MettlerToledoBDI(Instrument):
                 "auxiliary":"2"},
         map_values=True
     )
-    command_acknowedge=Instrument.control(
+    command_acknowledge=Instrument.control(
         "EC ?",
         "EC %i",
         """ An integer parameter enabling/disabling
