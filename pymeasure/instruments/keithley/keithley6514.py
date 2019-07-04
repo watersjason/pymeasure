@@ -30,7 +30,6 @@ from pymeasure.instruments import Instrument
 from pymeasure.instruments.validators import (strict_range,
                                               strict_discrete_set,
                                               truncated_range)
-from visa import VisaIOError
 
 from .buffer import KeithleyBuffer
 
