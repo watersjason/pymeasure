@@ -437,19 +437,10 @@ class Keithley6514(Instrument):
             Returns all data output by the device. See
             :param:`data_elements` for output parameters.
         """
-        elem = self.data_elements
+        rep = self.ask('READ?')
+        val = [float(_) for _ in rep.split(',')]
 
-        val = np.array([float(_) for _ in self.ask('READ?').split(',')])
-        self.system_local
-
-        val = val.reshape(-1,3)
-
-        # bound = np.abs(np.mean(val[0][1:])) + 3 * np.std(val[0][1:])
-        # if np.abs(val[0][0]) > bound or np.abs(val[0][0]) < bound:
-            # val = np.delete(val, 0, 1)
-
-        val = dict(zip(elem, val.transpose()))
-        return val
+        return dict(zip(self.data_elements, val))
     @property
     def read_function(self):
         """ Trigger and acquire the measurement data.
