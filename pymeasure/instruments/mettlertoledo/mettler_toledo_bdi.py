@@ -363,6 +363,9 @@ class MettlerToledoBDI(Instrument):
         if data_str == "S":
             raise VisaIOError("Value could not be read from device.")
 
+        while data_str == "ES":
+            data_str = self.ask("S").strip()
+
         if full_output:
             return(data_str)
         else:
@@ -383,6 +386,9 @@ class MettlerToledoBDI(Instrument):
         if data_str == "SI":
             raise VisaIOError("Value could not be read from device.")
 
+        while data_str == "ES":
+            data_str = self.ask("SI").strip()
+
         if full_output:
             return(data_str)
         else:
@@ -390,7 +396,6 @@ class MettlerToledoBDI(Instrument):
             is_stable = True if data[0]=='S' else False
             result, unit = float(data[1]), data[2]
             return {'value':result, 'unit':unit, 'stable':is_stable}
-
     def send_on_change(self, disable=False, threshold=None, full_output=False):
         """ Cancel any existing commands, then send
             the immediate unstable weighing result
