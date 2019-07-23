@@ -321,6 +321,7 @@ class MettlerToledoBDI(Instrument):
         includeSCPI=False,**kwargs)
 
         self.adapter.connection.timeout = kwargs.get('timeout', 60000)
+        self.write('U g')
     @property
     def calibrate(self):
         """ Manually intitate the calibration """
@@ -359,16 +360,18 @@ class MettlerToledoBDI(Instrument):
                                 of the device full output string. When `False`,
                                 the numeric weighing value is returned.
         """
-        _data_str=self.ask("S")
-        if _data_str is "S":
-            raise VisaIOError("Value not read from device.")
+        data_str = self.ask("S").strip()
+
+        if data_str == "S":
+            raise VisaIOError("Value could not be read from device.")
+
         if full_output:
-            return(_data_str)
+            return(data_str)
         else:
-            try:
-                return(float(_data_str.split()[1]))
-            except:
-                raise ValueError("Value could not be converted to float.")
+            data = data_str.split(' ')
+            is_stable = True if data[0]=='S' else False
+            result, unit = float(data[-2]), data[-1]
+            return {'value':result, 'unit':unit, 'stable':is_stable}
     def send_immediate(self,full_output=False):
         """ Cancel any existing commands and send the weighing
             result immediately.
@@ -377,37 +380,20 @@ class MettlerToledoBDI(Instrument):
                                 of the device full output string. When `False`,
                                 the numeric weighing value is returned.
         """
-        _data_str=self.ask("SI")
-        if _data_str is "SI":
+        data_str = self.ask("SI").strip()
+
+        if data_str == "SI":
             raise VisaIOError("Value could not be read from device.")
+
         if full_output:
-            return(_data_str)
+            return(data_str)
         else:
-            try:
-                return(float(_data_str.split()[1]))
-            except:
-                raise ValueError("Value could not be converted to float.")
-    def send_immediate_repeat(self,full_output=False):
-        """ Cancel any existing commands and then
-            repeatedly and send the immediate
-            weighing results.
+            data = data_str.split(' ')
+            is_stable = True if data[0]=='S' else False
+            result, unit = float(data[-2]), data[-1]
+            return {'value':result, 'unit':unit, 'stable':is_stable}
 
-            :param full_output: A boolean parameter that enables output
-                                of the device full output string. When `False`,
-                                the numeric weighing value is returned.
-        """
-        pass # TODO:
-    def send_stable_repeat(self,full_output=False):
-        """ Cancel any existing commands and then
-            repeatedly and send the stable weighing
-            results.
-
-            :param full_output: A boolean parameter that enables output
-                                of the device full output string. When `False`,
-                                the numeric weighing value is returned.
-        """
-        pass # TODO:
-    def send_on_change(self,disable=False,threshold=None,full_output=False):
+    def send_on_change(self, disable=False, threshold=None, full_output=False):
         """ Cancel any existing commands, then send
             the immediate unstable weighing result
             when the load changes by the threshold
@@ -439,9 +425,16 @@ class MettlerToledoBDI(Instrument):
     def tare(self):
         """ Tares the balance or switches it on again after a
             power failure. `timeout` is temporarily set to 60 s.
-            Raises `VisaIOError` if device tare is not successful.
         """
+        self.door_auto_mode = False
+        timeout = self.adapter.connection.timeout
+        self.adapter.connection.timeout = 61000
         self.write("T")
+        raw = self.ask('S').strip().split(' ')
+        result, unit = float(raw[-2]), raw[-1]
+        is_stable = True if raw[0]=='S' else False
+        self.adapter.connection.timeout = timeout
+        return {'value':result, 'unit':unit, 'stable':is_stable}
     @property
     def clear(self):
         """ Clear the resource IO. """
