@@ -253,14 +253,12 @@ class MettlerToledoBDI(Instrument):
     mode_autozero=Instrument.control(
         "MZ ?",
         "MZ %g",
-        """ A string parameter that turns the
-            autozero function `on` or `off`.
-        """,
+        """ A boolean parameter that enables the autozero function. """,
         validator=strict_discrete_set,
-        values={"off":"0",
-                "on":"1"},
+        values={False:0,
+                True: 1},
         map_values=True,
-        get_process=lambda v:v.split("=")[-1]
+        get_process=lambda v:int(v.split("=")[-1])
     )
     range_select=Instrument.control(
         "RG ?",
@@ -368,9 +366,9 @@ class MettlerToledoBDI(Instrument):
         if full_output:
             return(data_str)
         else:
-            data = data_str.split(' ')
+            data = data_str.split()
             is_stable = True if data[0]=='S' else False
-            result, unit = float(data[-2]), data[-1]
+            result, unit = float(data[1]), data[2]
             return {'value':result, 'unit':unit, 'stable':is_stable}
     def send_immediate(self,full_output=False):
         """ Cancel any existing commands and send the weighing
@@ -388,9 +386,9 @@ class MettlerToledoBDI(Instrument):
         if full_output:
             return(data_str)
         else:
-            data = data_str.split(' ')
+            data = data_str.split()
             is_stable = True if data[0]=='S' else False
-            result, unit = float(data[-2]), data[-1]
+            result, unit = float(data[1]), data[2]
             return {'value':result, 'unit':unit, 'stable':is_stable}
 
     def send_on_change(self, disable=False, threshold=None, full_output=False):
@@ -430,9 +428,9 @@ class MettlerToledoBDI(Instrument):
         timeout = self.adapter.connection.timeout
         self.adapter.connection.timeout = 61000
         self.write("T")
-        raw = self.ask('S').strip().split(' ')
-        result, unit = float(raw[-2]), raw[-1]
+        raw = self.ask('S').strip().split()
         is_stable = True if raw[0]=='S' else False
+        result, unit = float(raw[1]), raw[2]
         self.adapter.connection.timeout = timeout
         return {'value':result, 'unit':unit, 'stable':is_stable}
     @property
