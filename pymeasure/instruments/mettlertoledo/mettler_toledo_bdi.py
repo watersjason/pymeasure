@@ -433,7 +433,10 @@ class MettlerToledoBDI(Instrument):
         timeout = self.adapter.connection.timeout
         self.adapter.connection.timeout = 61000
         self.write("T")
-        raw = self.ask('S').strip().split()
+        raw = self.ask('S').strip()
+        while raw == "ES":
+            raw = self.ask('S').strip()
+        raw = raw.split()
         is_stable = True if raw[0]=='S' else False
         result, unit = float(raw[1]), raw[2]
         self.adapter.connection.timeout = timeout
