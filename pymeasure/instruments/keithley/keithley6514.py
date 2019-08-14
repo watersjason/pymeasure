@@ -145,6 +145,24 @@ class Keithley6514(Instrument):
         values=(0,1),
         cast=int
     )
+    display_data=Instrument.setting(
+        ":DISP:TEXT %s",
+        """ Display message can be up to 12 characters (ASCII) long.
+            A space is counted as a character.
+            Excess message characters result in an error.
+        """,
+        set_process= lambda v: "'{}'".foramt(v)
+    )
+    display_data_state=Instrument.control(
+        ":DISP:TEXT:STAT?",
+        ":DISP:TEXT:STAT %i",
+        """ A boolean parameter for the custom data display state.
+        When `True`, the custom data display is enabled.""",
+        validator=strict_range,
+        values=(0,1),
+        cast=int
+    )
+
     # FORMat
     data_elements=Instrument.measurement(
         ":FORM:ELEM?",
