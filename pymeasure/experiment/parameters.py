@@ -263,6 +263,76 @@ class VectorParameter(Parameter):
             self.__class__.__name__, self.name, self._value, self.units, self._length)
 
 
+class DictionaryParameter(Parameter):
+    """ :class:`.Parameter` sub-class that stores the value in a
+        dictionary format.
+
+        :var value:         Parameter value.
+
+        :param name:        Parameter name
+        :param keys:        Explicit list of allowed keys. Ignored if None.
+        :param units:       Parameter units of measure
+        :param default:     Parameter default value
+        :param ui_class:    A Qt class to use for the UI of this parameter
+    """
+
+    def __init__(self, name, keys=None, units=None, **kwargs):
+        super().__init__(name, **kwargs)
+        self._keys = tuple(keys) if keys is not None else None
+        self.units = units
+
+    @property
+    def value(self):
+        if self.is_set():
+            return self._value
+        else:
+            raise ValueError("Parameter value is not set")
+
+    @value.setter
+    def value(self, value):
+        if isinstance(value, dict) and self._keys is None:
+            self._value = value
+        elif isinstance(value, dict):
+            dict_value = {_:value[_] for _ in value.keys() if _ in self._keys}
+            if len(dict_value) != len(self._keys):
+                raise ValueError("Invalid choice for parameter value. "
+                                 "Dictionary must contain the keys %s"
+                                 ""% str(self._keys))
+            else:
+                self._value = dict_value
+        elif isinstance(value, (list,tuple)) and self._keys is None:
+            raise TypeError("Invalid type for parameter value. "
+                            "Must pass a dictionary when the parameter `keys` "
+                            "is not set.")
+        elif isinstance(value, (list,tuple)):
+            if len(value) == len(self.keys):
+                self._value = dict(zip(self.keys, value))
+            else:
+                raise ValueError("Invalid length for parameter value. "
+                                 "Value length must equal keys length. ")
+        else:
+            raise TypeError("Invalid type for parameter value.")
+
+    @property
+    def keys(self):
+        """ Returns immutable iteratable of the parameter value dictionary keys,
+         or None if not set.
+        """
+        return self._keys
+
+    def __str__(self):
+        if not self.is_set():
+            return ''
+        result = ''.join(repr(self.value).split())
+        if self.units:
+            result += " %s" % self.units
+        return result
+
+    def __repr__(self):
+        return "<%s(name=%s,value=%s,units=%s)>" % (
+            self.__class__.__name__, self.name, self.value, self.units)
+
+
 class ListParameter(Parameter):
     """ :class:`.Parameter` sub-class that stores the value as a list.
 
