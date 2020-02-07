@@ -267,13 +267,14 @@ class DictionaryParameter(Parameter):
     """ :class:`.Parameter` sub-class that stores the value in a
         dictionary format.
 
-        :var value: Parameter value as a list or dict
+        :var value:         Parameter value
 
-        :param name: The parameter name
-        :param keys: Explicit list of allowed keys - ignored if None
-        :param units: The units of measure for the parameter
-        :param default: The default value
-        :param ui_class: A Qt class to use for the UI of this parameter
+        :param name:        Parameter name
+        :param keys:        Explicit list of allowed keys. Ignored if None;
+                            required to input values of :type list:.
+        :param units:       Parameter units of measure
+        :param default:     Parameter default value
+        :param ui_class:    A Qt class to use for the UI of this parameter
     """
 
     def __init__(self, name, keys=None, units=None, **kwargs):
