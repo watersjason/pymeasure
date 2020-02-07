@@ -267,11 +267,15 @@ class DictionaryParameter(Parameter):
     """ :class:`.Parameter` sub-class that stores the value in a
         dictionary format.
 
-        :var value:         Parameter value
+        :var value:         Parameter value.
+                            Input values of :type list: are zipped into
+                            a dictionary and requires that :param keys:
+                            is set. A :type list: input must be
+                            ordered in accordance with :param keys:.
 
         :param name:        Parameter name
-        :param keys:        Explicit list of allowed keys. Ignored if None;
-                            required to input values of :type list:.
+        :param keys:        Explicit list of allowed keys. Ignored if None,
+                            but required to enable input of :type list: values.
         :param units:       Parameter units of measure
         :param default:     Parameter default value
         :param ui_class:    A Qt class to use for the UI of this parameter
@@ -316,7 +320,9 @@ class DictionaryParameter(Parameter):
 
     @property
     def keys(self):
-        """ Dictionary keys for the parameter value. """
+        """ Returns immutable iteratable of the parameter value dictionary keys,
+         or None if not set.
+        """
         return self._keys
 
     def __str__(self):
