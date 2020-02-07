@@ -302,7 +302,7 @@ class DictionaryParameter(Parameter):
                 self._value = dict_value
         elif isinstance(value, (list,tuple)) and self._keys is None:
             raise TypeError("Invalid type for parameter value. "
-                            "Must pass a dictionary when the :param keys: "
+                            "Must pass a dictionary when the parameter `keys` "
                             "is not set.")
         elif isinstance(value, (list,tuple)):
             if len(value) == len(self.keys):
