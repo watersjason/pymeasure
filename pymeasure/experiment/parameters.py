@@ -268,14 +268,9 @@ class DictionaryParameter(Parameter):
         dictionary format.
 
         :var value:         Parameter value.
-                            Input values of :type list: are zipped into
-                            a dictionary and requires that :param keys:
-                            is set. A :type list: input must be
-                            ordered in accordance with :param keys:.
 
         :param name:        Parameter name
-        :param keys:        Explicit list of allowed keys. Ignored if None,
-                            but required to enable input of :type list: values.
+        :param keys:        Explicit list of allowed keys. Ignored if None.
         :param units:       Parameter units of measure
         :param default:     Parameter default value
         :param ui_class:    A Qt class to use for the UI of this parameter
